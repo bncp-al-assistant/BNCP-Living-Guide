@@ -4,7 +4,7 @@
 // ==============================
 
 // Cloudflare Worker URL
-const API_URL = "YOUR_CLOUDFLARE_WORKER_URL";
+const API_URL = "https://broken-poetry-c6d2.chogak1449.workers.dev/";
 
 // 요소 가져오기
 const chatBox = document.getElementById("chatBox");

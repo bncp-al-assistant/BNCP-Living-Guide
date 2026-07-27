@@ -1,153 +1,49 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>BNCP 시설 예약</title>
+<title>시설예약</title>
 
-<style>
-
-body{
-    margin:0;
-    font-family:Arial;
-    background:#f5f5f5;
-}
-
-.header{
-
-    background:#ff6600;
-    color:white;
-    padding:20px;
-    text-align:center;
-    font-size:28px;
-    font-weight:bold;
-
-}
-
-.container{
-
-    width:90%;
-    max-width:900px;
-    margin:30px auto;
-    background:white;
-    border-radius:10px;
-    padding:25px;
-    box-shadow:0 0 10px rgba(0,0,0,.2);
-
-}
-
-label{
-
-    font-weight:bold;
-    display:block;
-    margin-top:15px;
-
-}
-
-input,select,textarea{
-
-    width:100%;
-    padding:10px;
-    margin-top:5px;
-    border:1px solid #ccc;
-    border-radius:5px;
-
-}
-
-textarea{
-
-    height:80px;
-
-}
-
-.checkbox-group{
-
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    margin-top:10px;
-
-}
-
-.checkbox-group label{
-
-    font-weight:normal;
-
-}
-
-button{
-
-    width:100%;
-    background:#ff6600;
-    color:white;
-    border:none;
-    padding:15px;
-    margin-top:25px;
-    font-size:18px;
-    border-radius:5px;
-    cursor:pointer;
-
-}
-
-button:hover{
-
-    background:#e55d00;
-
-}
-
-table{
-
-    width:100%;
-    border-collapse:collapse;
-    margin-top:40px;
-
-}
-
-th{
-
-    background:#ff6600;
-    color:white;
-
-}
-
-td,th{
-
-    border:1px solid #ddd;
-    padding:10px;
-    text-align:center;
-
-}
-
-</style>
+<link rel="stylesheet" href="reservation.css">
 
 </head>
 
 <body>
 
-<div class="header">
+<header>
 
-BNCP Smart Welfare Portal
-<br>
-시설 예약
+<h1>🏢 시설 예약</h1>
 
-</div>
+<a href="index.html">← 메인으로</a>
+
+</header>
 
 <div class="container">
 
+<h2>예약 신청</h2>
+
+<form id="reservationForm">
+
 <label>이용일자</label>
 
-<input type="date" id="date">
+<input type="date" id="date" required>
 
 <label>팀명</label>
 
 <select id="team">
 
-<option>공사팀</option>
-<option>사업관리팀</option>
 <option>관리재경팀</option>
-<option>경호경비팀</option>
-<option>이라크지사</option>
-<option>기타</option>
+
+<option>공사팀</option>
+
+<option>HSE팀</option>
+
+<option>IT팀</option>
 
 </select>
 
@@ -155,166 +51,72 @@ BNCP Smart Welfare Portal
 
 <input type="text" id="name">
 
-<label>인원수</label>
+<label>인원</label>
 
 <input type="number" id="people">
 
-<label>장소</label>
+<label>시설</label>
 
-<select id="place">
+<select id="facility">
+
+<option>Club House Hall</option>
 
 <option>Lounge</option>
-<option>Club House Hall</option>
-<option>Club House 1-1</option>
-<option>HM-29</option>
+
+<option>Sauna</option>
+
+<option>Tennis Court</option>
+
+<option>Meeting Room</option>
 
 </select>
 
 <label>요청사항</label>
 
-<div class="checkbox-group">
-
-<label><input type="checkbox" value="야채"> 야채</label>
-
-<label><input type="checkbox" value="쌈장"> 쌈장</label>
-
-<label><input type="checkbox" value="기름장"> 기름장</label>
-
-<label><input type="checkbox" value="석식메뉴"> 석식메뉴</label>
-
-<label><input type="checkbox" value="주류"> 주류</label>
-
-</div>
-
-<label>비고</label>
-
 <textarea id="memo"></textarea>
 
-<button onclick="saveReservation()">
+<button type="submit">
 
 예약하기
 
 </button>
 
-<table id="reservationTable">
+</form>
+
+</div>
+
+<div class="container">
+
+<h2>예약현황</h2>
+
+<table>
+
+<thead>
 
 <tr>
 
 <th>날짜</th>
 
-<th>팀</th>
+<th>시설</th>
 
 <th>신청자</th>
 
-<th>인원</th>
-
-<th>장소</th>
-
-<th>요청사항</th>
+<th>팀</th>
 
 </tr>
+
+</thead>
+
+<tbody id="reservationList">
+
+</tbody>
 
 </table>
 
 </div>
 
-<script>
-
-loadReservation();
-
-function saveReservation(){
-
-let date=document.getElementById("date").value;
-let team=document.getElementById("team").value;
-let name=document.getElementById("name").value;
-let people=document.getElementById("people").value;
-let place=document.getElementById("place").value;
-
-let request=[];
-
-document.querySelectorAll("input[type=checkbox]:checked").forEach(c=>{
-
-request.push(c.value);
-
-});
-
-let memo=document.getElementById("memo").value;
-
-let data=JSON.parse(localStorage.getItem("reservation"))||[];
-
-data.push({
-
-date,
-team,
-name,
-people,
-place,
-request:request.join(", "),
-memo
-
-});
-
-localStorage.setItem("reservation",JSON.stringify(data));
-
-alert("예약이 완료되었습니다.");
-
-loadReservation();
-
-}
-
-function loadReservation(){
-
-let table=document.getElementById("reservationTable");
-
-table.innerHTML=`
-
-<tr>
-
-<th>날짜</th>
-
-<th>팀</th>
-
-<th>신청자</th>
-
-<th>인원</th>
-
-<th>장소</th>
-
-<th>요청사항</th>
-
-</tr>
-
-`;
-
-let data=JSON.parse(localStorage.getItem("reservation"))||[];
-
-data.forEach(r=>{
-
-table.innerHTML+=`
-
-<tr>
-
-<td>${r.date}</td>
-
-<td>${r.team}</td>
-
-<td>${r.name}</td>
-
-<td>${r.people}</td>
-
-<td>${r.place}</td>
-
-<td>${r.request}</td>
-
-</tr>
-
-`;
-
-});
-
-}
-
-</script>
+<script src="reservation.js"></script>
 
 </body>
+
 </html>

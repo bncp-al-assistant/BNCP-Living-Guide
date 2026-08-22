@@ -1,15 +1,629 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=https://odd-butterfly-b936.chogak1449.workers.dev">
-<title>BNCP AI Assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BNCP 출입국 신청 시스템</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1a2e; color: #e8eaed; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+/* 헤더 */
+.top-bar { background: #16213e; border-bottom: 1px solid #2c3e50; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.top-bar h1 { font-size: 16px; font-weight: 600; color: #ff6b00; }
+.top-bar .sub { font-size: 12px; color: #9aa0a6; margin-left: 12px; }
+
+/* 탭 */
+.tab-bar { background: #16213e; display: flex; padding: 0 24px; border-bottom: 1px solid #2c3e50; }
+.tab { padding: 14px 20px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; color: #9aa0a6; background: none; border-top: none; border-left: none; border-right: none; border-radius: 0; }
+.tab.active { color: #ff6b00; border-bottom-color: #ff6b00; font-weight: 600; }
+
+/* 메인 */
+.main { max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* 카드 */
+.card { background: #16213e; border: 1px solid #2c3e50; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 600; color: #ff6b00; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+/* 폼 */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1/-1; }
+label { font-size: 12px; color: #9aa0a6; font-weight: 500; }
+.req { color: #e74c3c; }
+input, select, textarea { background: #202124; border: 1px solid #3c4043; border-radius: 8px; color: #e8eaed; font-size: 14px; padding: 9px 12px; width: 100%; font-family: inherit; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #ff6b00; }
+input[type=file] { padding: 7px 12px; }
+
+/* 버튼 */
+.btn { padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #3c4043; background: #202124; color: #e8eaed; transition: all .15s; }
+.btn:hover { border-color: #5f6368; }
+.btn-primary { background: #ff6b00; border-color: #ff6b00; color: #fff; }
+.btn-primary:hover { background: #e05e00; }
+.btn-success { background: #2d9a5a; border-color: #2d9a5a; color: #fff; }
+.btn-danger { background: transparent; border-color: #e74c3c; color: #e74c3c; }
+.btn-danger:hover { background: #e74c3c; color: #fff; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* 배지 */
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-pending { background: #2c2000; color: #f5a623; border: 1px solid #7a4100; }
+.badge-approved { background: #0f2d1c; color: #2d9a5a; border: 1px solid #1b4332; }
+.badge-rejected { background: #2c0a0a; color: #e74c3c; border: 1px solid #7a1a1a; }
+.badge-biz { background: #0a1a2c; color: #4a9eff; border: 1px solid #0f3460; }
+.badge-vacation { background: #1a0a2c; color: #9b59b6; border: 1px solid #4a1942; }
+.badge-gray { background: #2c2c2c; color: #9aa0a6; border: 1px solid #3c4043; }
+
+/* 알림 박스 */
+.info-box { background: #0d1e30; border: 1px solid #0f3460; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #4a9eff; margin-bottom: 16px; }
+.warn-box { background: #2c1800; border: 1px solid #7a4100; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f5a623; margin-bottom: 16px; }
+.success-box { background: #0a2010; border: 1px solid #1b4332; border-radius: 8px; padding: 12px 16px; font-size: 14px; color: #2d9a5a; margin-bottom: 16px; display: none; }
+
+/* 진행 바 */
+.step-bar { display: flex; align-items: center; margin-bottom: 24px; }
+.step { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.step.done .step-num { background: #2d9a5a; color: #fff; }
+.step.active .step-num { background: #ff6b00; color: #fff; }
+.step.wait .step-num { background: #2c2c2c; color: #9aa0a6; border: 1px solid #3c4043; }
+.step.active .step-label { color: #e8eaed; font-weight: 600; }
+.step.wait .step-label { color: #9aa0a6; }
+.step.done .step-label { color: #9aa0a6; }
+.step-line { flex: 1; height: 1px; background: #2c3e50; margin: 0 8px; }
+.step-line.done { background: #2d9a5a; }
+
+/* 통계 */
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat { background: #16213e; border: 1px solid #2c3e50; border-radius: 10px; padding: 16px; text-align: center; }
+.stat-n { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.stat-l { font-size: 12px; color: #9aa0a6; }
+
+/* 테이블 */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { background: #0d1620; }
+th { padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 600; color: #9aa0a6; border-bottom: 1px solid #2c3e50; white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid #1a2332; color: #e8eaed; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #1a2332; }
+
+/* 필터 */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-bar input, .filter-bar select { background: #202124; border: 1px solid #3c4043; border-radius: 8px; color: #e8eaed; font-size: 13px; padding: 7px 10px; width: auto; }
+
+/* 내 신청 카드 */
+.req-card { background: #16213e; border: 1px solid #2c3e50; border-radius: 10px; padding: 16px; margin-bottom: 12px; border-left: 3px solid #3c4043; }
+.req-card.pending { border-left-color: #f5a623; }
+.req-card.approved { border-left-color: #2d9a5a; }
+.req-card.rejected { border-left-color: #e74c3c; }
+.req-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.req-info-item { background: #202124; border-radius: 8px; padding: 10px; }
+.req-info-label { font-size: 11px; color: #9aa0a6; margin-bottom: 4px; }
+.req-info-value { font-size: 14px; font-weight: 600; }
+
+/* 모달 */
+.modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #16213e; border: 1px solid #2c3e50; border-radius: 12px; padding: 24px; width: 500px; max-width: 95vw; }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+/* 탭 섹션 */
+.section { display: none; }
+.section.active { display: block; }
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .req-info-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
 </head>
 <body>
+
+<div class="top-bar">
+  <div style="display:flex;align-items:center">
+    <h1>✈️ BNCP 출입국 신청 시스템</h1>
+    <span class="sub">— BNCP AI Assistant 연동</span>
+  </div>
+  <div style="font-size:13px;color:#9aa0a6" id="todayDate"></div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="showTab('apply',this)">신청서 작성</button>
+  <button class="tab" onclick="showTab('mystatus',this)">내 신청 현황</button>
+  <button class="tab" onclick="showTab('admin',this)">담당자 현황판</button>
+</div>
+
+<div class="main">
+
+  <!-- ① 신청서 작성 -->
+  <div class="section active" id="tab-apply">
+    <div class="step-bar">
+      <div class="step active"><div class="step-num">1</div><span class="step-label">신청 정보 입력</span></div>
+      <div class="step-line"></div>
+      <div class="step wait"><div class="step-num">2</div><span class="step-label">담당자 검토</span></div>
+      <div class="step-line"></div>
+      <div class="step wait"><div class="step-num">3</div><span class="step-label">여행사 발권</span></div>
+      <div class="step-line"></div>
+      <div class="step wait"><div class="step-num">4</div><span class="step-label">발권 완료</span></div>
+    </div>
+
+    <div class="warn-box">⚠️ 휴가·부임·귀임·출장 시 최소 <strong>4주 전</strong> 신청하세요. 발권 후 일정 변경 시 추가 비용이 발생할 수 있습니다.</div>
+
+    <div id="applySuccess" class="success-box">✅ 신청이 접수되었습니다! 담당자 검토 후 항공권 발권이 진행됩니다.</div>
+
+    <div class="card">
+      <div class="card-title">👤 신청자 정보</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>이름 <span class="req">*</span></label>
+          <input type="text" id="f_name" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+          <label>소속팀 <span class="req">*</span></label>
+          <select id="f_team">
+            <option value="">선택</option>
+            <option>공사팀</option><option>사업관리팀</option><option>관리재경팀</option>
+            <option>경호경비팀</option><option>이라크지사</option><option>이라크사업실</option>
+            <option>(협)한화H&R</option><option>(협)LS ELECTRIC</option><option>(협)한화시스템</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>직급</label>
+          <select id="f_rank">
+            <option value="">선택</option>
+            <option>상무</option><option>부장</option><option>차장</option>
+            <option>과장</option><option>대리</option><option>사원</option><option>주방장</option><option>소장</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>사번</label>
+          <input type="text" id="f_empId" placeholder="예: 2103071">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✈️ 출입국 정보</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>신청 유형 <span class="req">*</span></label>
+          <select id="f_type" onchange="onTypeChange()">
+            <option value="">선택</option>
+            <option value="vacation">휴가 (이라크→한국)</option>
+            <option value="return">복귀 (한국→이라크)</option>
+            <option value="assignment">부임 (한국→이라크)</option>
+            <option value="repatriate">귀임 (이라크→한국, 영구복귀)</option>
+            <option value="biz">출장</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>출국사유</label>
+          <select id="f_reason">
+            <option>휴가</option><option>부임</option><option>귀임</option><option>출장</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="lbl_dep">이라크 출발일 <span class="req">*</span></label>
+          <input type="date" id="f_departure">
+        </div>
+        <div class="form-group">
+          <label id="lbl_arr">이라크 도착일</label>
+          <input type="date" id="f_arrival">
+        </div>
+        <div class="form-group">
+          <label>희망 항공편</label>
+          <input type="text" id="f_airline" placeholder="예: EK 944 (미정 시 공란)">
+        </div>
+        <div class="form-group">
+          <label>경유지</label>
+          <select id="f_transit">
+            <option>직항</option><option>이스탄불(TK)</option><option>두바이(EK)</option><option>기타</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>비고 / 특이사항</label>
+          <input type="text" id="f_note" placeholder="예: 경조사 긴급 발권, 보딩패스 첨부 필요 등">
+        </div>
+      </div>
+      <div id="typeHint" style="margin-top:12px;display:none"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="resetForm()">초기화</button>
+      <button class="btn btn-primary" onclick="submitRequest()">신청 제출 →</button>
+    </div>
+  </div>
+
+  <!-- ② 내 신청 현황 -->
+  <div class="section" id="tab-mystatus">
+    <div class="card" style="margin-bottom:16px">
+      <div class="form-grid" style="align-items:flex-end">
+        <div class="form-group">
+          <label>이름으로 조회</label>
+          <input type="text" id="myName" placeholder="본인 이름 입력">
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="loadMyRequests()">조회</button>
+        </div>
+      </div>
+    </div>
+    <div id="myRequestList"><p style="color:#9aa0a6;font-size:14px">이름을 입력하고 조회하세요.</p></div>
+  </div>
+
+  <!-- ③ 담당자 현황판 -->
+  <div class="section" id="tab-admin">
+    <div class="stat-row" id="adminStats">
+      <div class="stat"><div class="stat-n" style="color:#f5a623">-</div><div class="stat-l">검토 대기</div></div>
+      <div class="stat"><div class="stat-n" style="color:#2d9a5a">-</div><div class="stat-l">승인</div></div>
+      <div class="stat"><div class="stat-n" style="color:#e74c3c">-</div><div class="stat-l">반려</div></div>
+      <div class="stat"><div class="stat-n" style="color:#e8eaed">-</div><div class="stat-l">전체</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 조회 조건</div>
+      <div class="filter-bar">
+        <select id="filterStatus">
+          <option value="">전체 상태</option>
+          <option value="PENDING">검토 대기</option>
+          <option value="APPROVED">승인</option>
+          <option value="REJECTED">반려</option>
+        </select>
+        <select id="filterType">
+          <option value="">전체 유형</option>
+          <option value="vacation">휴가</option>
+          <option value="return">복귀</option>
+          <option value="assignment">부임</option>
+          <option value="repatriate">귀임</option>
+          <option value="biz">출장</option>
+        </select>
+        <select id="filterTeam">
+          <option value="">전체 팀</option>
+          <option>공사팀</option><option>사업관리팀</option><option>관리재경팀</option>
+          <option>경호경비팀</option><option>이라크지사</option>
+        </select>
+        <input type="text" id="filterName" placeholder="이름 검색" style="width:120px">
+        <button class="btn btn-primary btn-sm" onclick="loadAdminList()">조회</button>
+        <button class="btn btn-sm" onclick="exportCSV()">📥 CSV 다운로드</button>
+      </div>
+      <div id="adminSyncInfo" style="font-size:12px;color:#9aa0a6;margin-bottom:12px"></div>
+      <div class="table-wrap">
+        <table id="adminTable">
+          <thead>
+            <tr>
+              <th>신청일</th><th>이름</th><th>팀</th><th>직급</th><th>유형</th>
+              <th>이라크 출발</th><th>이라크 도착</th><th>항공편</th><th>상태</th><th>처리</th>
+            </tr>
+          </thead>
+          <tbody id="adminTbody">
+            <tr><td colspan="10" style="color:#9aa0a6;text-align:center;padding:24px">로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="info-box" style="font-size:12px">
+      💡 승인 시 BNCP AI Assistant의 <strong>출입국 현황 탭</strong>과 <strong>AI 답변</strong>에 자동으로 반영됩니다.
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- 승인/반려 모달 -->
+<div class="modal-bg" id="reviewModal">
+  <div class="modal">
+    <h3 id="modalTitle">신청 처리</h3>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>담당자 이름</label>
+      <input type="text" id="modalReviewer" placeholder="처리 담당자 이름">
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>메모 (선택)</label>
+      <input type="text" id="modalNote" placeholder="발권 일정, 특이사항 등">
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn btn-success" id="modalConfirmBtn" onclick="confirmReview()">확인</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  window.location.replace('https://odd-butterfly-b936.chogak1449.workers.dev');
+const API = 'https://odd-butterfly-b936.chogak1449.workers.dev';
+let allRequests = [];
+let currentReviewId = '';
+let currentReviewAction = '';
+
+const TYPE_LABEL = { vacation:'휴가', return:'복귀', assignment:'부임', repatriate:'귀임', biz:'출장' };
+const TYPE_HINT = {
+  vacation: '이라크 출발 = 휴가 시작일(이라크→한국). 이라크 도착 = 복귀일(한국→이라크). 전자결재 필수.',
+  return: '한국 출발 → 이라크 캠프 도착. 휴가·귀임 이후 복귀 시 사용.',
+  assignment: '신규·재부임. 이라크 도착일 입력. 건강보험 정지 신청 병행 필요.',
+  repatriate: '이라크 캠프 근무 종료 후 한국 영구 복귀. 건강보험 복귀 신청 병행 필요.',
+  biz: '출장. 팀장 사전 승인 필요.'
+};
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'admin') loadAdminList();
+}
+
+function onTypeChange() {
+  const v = document.getElementById('f_type').value;
+  const hint = document.getElementById('typeHint');
+  const depLabel = document.getElementById('lbl_dep');
+  const arrLabel = document.getElementById('lbl_arr');
+  if (v === 'assignment') {
+    depLabel.innerHTML = '한국 출발일 <span class="req">*</span>';
+    arrLabel.innerHTML = '이라크 도착일 <span class="req">*</span>';
+  } else if (v === 'repatriate') {
+    depLabel.innerHTML = '이라크 출발일(귀임) <span class="req">*</span>';
+    arrLabel.innerHTML = '한국 도착일';
+  } else {
+    depLabel.innerHTML = '이라크 출발일 <span class="req">*</span>';
+    arrLabel.innerHTML = '이라크 도착일';
+  }
+  if (TYPE_HINT[v]) {
+    hint.style.display = 'block';
+    hint.className = 'info-box';
+    hint.textContent = '💡 ' + TYPE_HINT[v];
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+function resetForm() {
+  ['f_name','f_team','f_rank','f_empId','f_type','f_reason','f_departure','f_arrival','f_airline','f_transit','f_note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  document.getElementById('typeHint').style.display = 'none';
+  document.getElementById('applySuccess').style.display = 'none';
+}
+
+async function submitRequest() {
+  const name = document.getElementById('f_name').value.trim();
+  const team = document.getElementById('f_team').value;
+  const requestType = document.getElementById('f_type').value;
+  const departure = document.getElementById('f_departure').value;
+
+  if (!name) { alert('이름을 입력해주세요.'); return; }
+  if (!team) { alert('소속팀을 선택해주세요.'); return; }
+  if (!requestType) { alert('신청 유형을 선택해주세요.'); return; }
+  if (!departure) { alert('출발일을 입력해주세요.'); return; }
+
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '신청 중...';
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'immigration_request_submit',
+        data: {
+          name, team,
+          rank: document.getElementById('f_rank').value,
+          empId: document.getElementById('f_empId').value,
+          requestType,
+          departure,
+          arrival: document.getElementById('f_arrival').value,
+          airline: document.getElementById('f_airline').value,
+          transit: document.getElementById('f_transit').value,
+          note: document.getElementById('f_note').value,
+        }
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    document.getElementById('applySuccess').style.display = 'block';
+    document.getElementById('applySuccess').textContent = `✅ 신청이 접수되었습니다! (신청자: ${name} / 유형: ${TYPE_LABEL[requestType]}) 담당자 검토 후 발권이 진행됩니다.`;
+    resetForm();
+    document.getElementById('applySuccess').style.display = 'block';
+  } catch (e) {
+    alert('신청 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '신청 제출 →';
+  }
+}
+
+async function loadMyRequests() {
+  const name = document.getElementById('myName').value.trim();
+  if (!name) { alert('이름을 입력해주세요.'); return; }
+  const area = document.getElementById('myRequestList');
+  area.innerHTML = '<p style="color:#9aa0a6;font-size:14px">조회 중...</p>';
+  try {
+    const res = await fetch(`${API}?type=immigration_my_requests&name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    if (!data.requests.length) {
+      area.innerHTML = '<p style="color:#9aa0a6;font-size:14px">신청 내역이 없습니다.</p>';
+      return;
+    }
+    area.innerHTML = data.requests.map(r => `
+      <div class="req-card ${r.status.toLowerCase()}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <span class="badge ${r.status==='PENDING'?'badge-pending':r.status==='APPROVED'?'badge-approved':'badge-rejected'}" style="margin-bottom:8px">
+              ${r.status==='PENDING'?'검토 대기':r.status==='APPROVED'?'승인':'반려'}
+            </span>
+            <div style="font-size:15px;font-weight:600">${TYPE_LABEL[r.requestType]||r.requestType} · ${r.team}</div>
+            <div style="font-size:12px;color:#9aa0a6;margin-top:4px">신청일: ${r.submittedAt.slice(0,10)}</div>
+          </div>
+        </div>
+        <div class="req-info-grid">
+          <div class="req-info-item"><div class="req-info-label">이라크 출발</div><div class="req-info-value">${r.departure||'-'}</div></div>
+          <div class="req-info-item"><div class="req-info-label">이라크 도착</div><div class="req-info-value">${r.arrival||'-'}</div></div>
+          <div class="req-info-item"><div class="req-info-label">항공편</div><div class="req-info-value">${r.airline||'미정'}</div></div>
+        </div>
+        ${r.reviewNote ? `<div style="margin-top:10px;font-size:13px;color:#9aa0a6">📝 담당자 메모: ${r.reviewNote}</div>` : ''}
+        <div class="step-bar" style="margin-top:14px;margin-bottom:0">
+          <div class="step done"><div class="step-num">✓</div><span class="step-label">신청 접수</span></div>
+          <div class="step-line ${r.status!=='PENDING'?'done':''}"></div>
+          <div class="step ${r.status==='PENDING'?'active':r.status==='APPROVED'||r.status==='REJECTED'?'done':'wait'}">
+            <div class="step-num">${r.status==='APPROVED'||r.status==='REJECTED'?'✓':'2'}</div>
+            <span class="step-label">담당자 검토</span>
+          </div>
+          <div class="step-line ${r.status==='APPROVED'?'done':''}"></div>
+          <div class="step ${r.status==='APPROVED'?'active':'wait'}"><div class="step-num">3</div><span class="step-label">여행사 발권</span></div>
+          <div class="step-line"></div>
+          <div class="step wait"><div class="step-num">4</div><span class="step-label">발권 완료</span></div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    area.innerHTML = `<p style="color:#e74c3c;font-size:14px">조회 실패: ${e.message}</p>`;
+  }
+}
+
+async function loadAdminList() {
+  const tbody = document.getElementById('adminTbody');
+  tbody.innerHTML = '<tr><td colspan="10" style="color:#9aa0a6;text-align:center;padding:24px">로딩 중...</td></tr>';
+  try {
+    const res = await fetch(`${API}?type=immigration_requests_list`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    allRequests = data.requests;
+    renderAdminTable();
+    updateStats();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="10" style="color:#e74c3c;text-align:center;padding:24px">로드 실패: ${e.message}</td></tr>`;
+  }
+}
+
+function renderAdminTable() {
+  const statusF = document.getElementById('filterStatus').value;
+  const typeF = document.getElementById('filterType').value;
+  const teamF = document.getElementById('filterTeam').value;
+  const nameF = document.getElementById('filterName').value.trim();
+
+  const filtered = allRequests.filter(r =>
+    (!statusF || r.status === statusF) &&
+    (!typeF || r.requestType === typeF) &&
+    (!teamF || r.team === teamF) &&
+    (!nameF || r.name.includes(nameF))
+  );
+
+  const tbody = document.getElementById('adminTbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="color:#9aa0a6;text-align:center;padding:24px">조회 결과가 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td style="color:#9aa0a6">${r.submittedAt.slice(0,10)}</td>
+      <td style="font-weight:600">${r.name}</td>
+      <td>${r.team}</td>
+      <td>${r.rank}</td>
+      <td><span class="badge ${r.requestType==='vacation'||r.requestType==='return'?'badge-vacation':r.requestType==='biz'?'badge-biz':'badge-gray'}">${TYPE_LABEL[r.requestType]||r.requestType}</span></td>
+      <td>${r.departure||'-'}</td>
+      <td>${r.arrival||'-'}</td>
+      <td>${r.airline||'미정'}</td>
+      <td><span class="badge ${r.status==='PENDING'?'badge-pending':r.status==='APPROVED'?'badge-approved':'badge-rejected'}">${r.status==='PENDING'?'검토 대기':r.status==='APPROVED'?'승인':'반려'}</span></td>
+      <td>
+        ${r.status === 'PENDING' ? `
+          <button class="btn btn-sm btn-success" onclick="openReview('${r.id}','approve')" style="margin-right:4px">승인</button>
+          <button class="btn btn-sm btn-danger" onclick="openReview('${r.id}','reject')">반려</button>
+        ` : `<span style="font-size:12px;color:#9aa0a6">${r.reviewer||''} ${r.reviewedAt?r.reviewedAt.slice(0,10):''}</span>`}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function updateStats() {
+  const stats = document.getElementById('adminStats');
+  const pending = allRequests.filter(r=>r.status==='PENDING').length;
+  const approved = allRequests.filter(r=>r.status==='APPROVED').length;
+  const rejected = allRequests.filter(r=>r.status==='REJECTED').length;
+  stats.children[0].querySelector('.stat-n').textContent = pending;
+  stats.children[1].querySelector('.stat-n').textContent = approved;
+  stats.children[2].querySelector('.stat-n').textContent = rejected;
+  stats.children[3].querySelector('.stat-n').textContent = allRequests.length;
+}
+
+function openReview(id, action) {
+  currentReviewId = id;
+  currentReviewAction = action;
+  document.getElementById('modalTitle').textContent = action === 'approve' ? '✅ 신청 승인' : '❌ 신청 반려';
+  document.getElementById('modalConfirmBtn').textContent = action === 'approve' ? '승인 확인' : '반려 확인';
+  document.getElementById('modalConfirmBtn').className = action === 'approve' ? 'btn btn-success' : 'btn btn-danger';
+  document.getElementById('modalReviewer').value = '';
+  document.getElementById('modalNote').value = '';
+  document.getElementById('reviewModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+}
+
+async function confirmReview() {
+  const reviewer = document.getElementById('modalReviewer').value.trim() || '담당자';
+  const reviewNote = document.getElementById('modalNote').value.trim();
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: currentReviewAction === 'approve' ? 'immigration_request_approve' : 'immigration_request_reject',
+        id: currentReviewId,
+        reviewer,
+        reviewNote
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    closeModal();
+    const syncInfo = document.getElementById('adminSyncInfo');
+    if (currentReviewAction === 'approve') {
+      syncInfo.textContent = '✅ 승인 완료. BNCP AI Assistant 출입국 현황에 자동 반영되었습니다. (' + new Date().toLocaleTimeString('ko-KR') + ')';
+      syncInfo.style.color = '#2d9a5a';
+    }
+    await loadAdminList();
+  } catch (e) {
+    alert('처리 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function exportCSV() {
+  const rows = [['신청일','이름','팀','직급','유형','이라크출발','이라크도착','항공편','상태','담당자','처리일','메모']];
+  allRequests.forEach(r => {
+    rows.push([
+      r.submittedAt.slice(0,10), r.name, r.team, r.rank,
+      TYPE_LABEL[r.requestType]||r.requestType,
+      r.departure||'', r.arrival||'', r.airline||'',
+      r.status==='PENDING'?'검토대기':r.status==='APPROVED'?'승인':'반려',
+      r.reviewer||'', r.reviewedAt?r.reviewedAt.slice(0,10):'', r.reviewNote||''
+    ]);
+  });
+  const csv = '\uFEFF' + rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `출입국신청현황_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+document.getElementById('reviewModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('reviewModal')) closeModal();
+});
 </script>
-<p>주소가 변경되었습니다. 자동으로 이동합니다...<br>
-이동하지 않으면 <a href="https://odd-butterfly-b936.chogak1449.workers.dev">여기</a>를 클릭하세요.</p>
 </body>
 </html>

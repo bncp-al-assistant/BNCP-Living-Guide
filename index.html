@@ -858,7 +858,7 @@
 
   // ---------- VIEW MODE (전체 / 일자별) ----------
   state.mode = { batters:'overall', pitchers:'overall' };
-  state.search = { batters: { name:'', dates: [] } };
+  state.search = { batters: { name:'', dates: [] }, pitchers: { name:'', dates: [] } };
 
   var searchNameBatters = document.getElementById('search-name-batters');
   var searchNameBtn = document.getElementById('search-name-btn');
@@ -2082,6 +2082,7 @@
           (lineupsForDate.length ? ' · 라인업 등록됨' : '') + '</div>' +
         '<div class="cd-actions">' +
           '<button type="button" class="btn btn-ghost" id="cd-go-batters">타자 기록 보기</button>' +
+          '<button type="button" class="btn btn-ghost" id="cd-go-pitchers">투수 기록 보기</button>' +
           (lineupsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button>' : '') +
         '</div>';
       calDetail.style.display = '';
@@ -2098,6 +2099,19 @@
         updateSearchVisibility('batters');
         state.search.batters.dates = [dateStr];
         renderTable('batters');
+      });
+
+      document.getElementById('cd-go-pitchers').addEventListener('click', function(){
+        switchToTab('pitchers');
+        state.mode.pitchers = 'bydate';
+        document.querySelectorAll('.view-btn[data-view-tab="pitchers"]').forEach(function(b){
+          b.classList.toggle('active', b.dataset.view === 'bydate');
+        });
+        state.sort.pitchers = 'date';
+        state.dir.pitchers = 'desc';
+        populateSortSelect('pitchers');
+        state.search.pitchers.dates = [dateStr];
+        renderTable('pitchers');
       });
 
       var goLineupBtn = document.getElementById('cd-go-lineup');

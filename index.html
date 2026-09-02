@@ -291,6 +291,20 @@
     padding:0; cursor:pointer;
   }
 
+  .avatar[src], .rp-avatar[src]{cursor:zoom-in;}
+
+  .lightbox-overlay{
+    display:none; position:fixed; inset:0; z-index:200;
+    background:rgba(5,8,20,0.86);
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .lightbox-overlay.open{display:flex;}
+  .lightbox-overlay img{
+    max-width:min(90vw, 480px); max-height:80vh;
+    border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    object-fit:contain;
+  }
+
   .home-away-badge{
     margin-left:auto; padding:3px 10px; border-radius:999px;
     font-size:11px; font-weight:700; color:#fff; flex-shrink:0;
@@ -791,6 +805,11 @@
       <button type="button" class="btn btn-gold" id="import-run">가져오기</button>
     </div>
   </div>
+</div>
+
+<!-- PHOTO LIGHTBOX -->
+<div class="lightbox-overlay" id="photo-lightbox">
+  <img id="photo-lightbox-img" src="" alt="">
 </div>
 
 <script>
@@ -1696,15 +1715,44 @@
 
   var TRANSPARENT_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7';
 
+  // Resize/compress an image file to a reasonably small square dataURL so it
+  // stores reliably in localStorage (large photos can silently exceed quota).
+  function resizeImageToDataUrl(file, maxDim, cb){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale));
+        var ch = Math.max(1, Math.round(h * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, cw, ch);
+        var dataUrl;
+        try{
+          dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        }catch(err){
+          dataUrl = null;
+        }
+        cb(dataUrl);
+      };
+      img.onerror = function(){ cb(null); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ cb(null); };
+    reader.readAsDataURL(file);
+  }
+
   photoInput.addEventListener('change', function(){
     var file = photoInput.files[0];
     if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e){
-      currentPhotoData = e.target.result;
+    resizeImageToDataUrl(file, 320, function(dataUrl){
+      if(!dataUrl){ alert('사진을 불러오지 못했습니다.'); return; }
+      currentPhotoData = dataUrl;
       photoPreview.src = currentPhotoData;
-    };
-    reader.readAsDataURL(file);
+    });
   });
 
   form.addEventListener('submit', function(e){
@@ -1774,6 +1822,28 @@
 
   document.addEventListener('keydown', function(e){
     if(e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    if(e.key === 'Escape' && photoLightbox.classList.contains('open')) closePhotoLightbox();
+  });
+
+  // ---------- PHOTO LIGHTBOX (click any avatar to view large) ----------
+  var photoLightbox = document.getElementById('photo-lightbox');
+  var photoLightboxImg = document.getElementById('photo-lightbox-img');
+
+  function openPhotoLightbox(src){
+    photoLightboxImg.src = src;
+    photoLightbox.classList.add('open');
+  }
+  function closePhotoLightbox(){
+    photoLightbox.classList.remove('open');
+    photoLightboxImg.src = '';
+  }
+  photoLightbox.addEventListener('click', closePhotoLightbox);
+
+  document.addEventListener('click', function(e){
+    var img = e.target.closest('img.avatar, img.rp-avatar');
+    if(img && img.getAttribute('src')){
+      openPhotoLightbox(img.getAttribute('src'));
+    }
   });
 
   // ---------- LINEUPS ----------
@@ -2565,24 +2635,34 @@
     rosterPhotoInput.addEventListener('change', function(){
       var file = rosterPhotoInput.files[0];
       if(!file || !rosterUploadTargetKey) return;
-      var reader = new FileReader();
-      reader.onload = function(e){
-        savePlayerPhoto(rosterUploadTargetKey, e.target.result);
-      };
-      reader.readAsDataURL(file);
+      resizeImageToDataUrl(file, 320, function(dataUrl){
+        if(!dataUrl){ alert('사진을 불러오지 못했습니다.'); return; }
+        savePlayerPhoto(rosterUploadTargetKey, dataUrl);
+      });
     });
   }
 
   function savePlayerPhoto(nameKey, dataUrl){
-    ['batters','pitchers'].forEach(function(tab){
-      var rows = aggregateRows(tab);
-      var exists = rows.some(function(r){ return r.id === nameKey; });
-      if(!exists) return;
-      var profiles = loadProfiles(tab);
-      var existingTeam = (profiles[nameKey] && profiles[nameKey].team) || '';
-      profiles[nameKey] = { team: existingTeam, photo: dataUrl };
-      saveProfiles(tab, profiles);
-    });
+    var savedAny = false;
+    try{
+      ['batters','pitchers'].forEach(function(tab){
+        var rows = aggregateRows(tab);
+        var exists = rows.some(function(r){ return r.id === nameKey; });
+        if(!exists) return;
+        var profiles = loadProfiles(tab);
+        var existingTeam = (profiles[nameKey] && profiles[nameKey].team) || '';
+        profiles[nameKey] = { team: existingTeam, photo: dataUrl };
+        saveProfiles(tab, profiles);
+        savedAny = true;
+      });
+    }catch(err){
+      alert('사진 저장에 실패했습니다. 브라우저 저장 공간이 가득 찼을 수 있습니다.');
+      return;
+    }
+    if(!savedAny){
+      alert('이 선수의 타자·투수 기록을 찾을 수 없어 사진을 저장하지 못했습니다.');
+      return;
+    }
     renderRoster();
     renderTable('batters');
     renderTable('pitchers');

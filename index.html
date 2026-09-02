@@ -216,6 +216,37 @@
   .calendar-detail .cd-stats{font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;}
   .calendar-detail .cd-actions{display:flex; gap:8px;}
 
+  .schedule-layout{display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;}
+  .schedule-main{flex:1 1 420px; min-width:0;}
+  .schedule-side{width:320px; flex-shrink:0;}
+  @media (max-width:900px){
+    .schedule-side{width:100%;}
+  }
+
+  .notice-board{
+    border:1px solid var(--line); border-radius:12px; background:var(--bg-panel);
+    padding:18px;
+  }
+  .notice-board h3{margin:0 0 12px; font-size:15px; color:var(--gold-deep);}
+  .notice-list{display:flex; flex-direction:column; gap:10px; margin-bottom:14px; max-height:360px; overflow-y:auto;}
+  .notice-item{
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    background:var(--bg-soft); position:relative;
+  }
+  .notice-item .notice-text{font-size:13px; color:var(--ink); white-space:pre-wrap; line-height:1.5; margin-bottom:6px; padding-right:20px;}
+  .notice-item .notice-date{font-size:11px; color:var(--ink-soft);}
+  .notice-item .notice-del{
+    position:absolute; top:8px; right:8px;
+    background:none; border:none; color:var(--ink-soft); font-size:13px; cursor:pointer; line-height:1;
+  }
+  .notice-item .notice-del:hover{color:var(--danger);}
+  .notice-empty{font-size:12.5px; color:var(--ink-soft); padding:8px 0;}
+  .notice-add textarea{
+    width:100%; resize:vertical; padding:8px 10px; font-size:13px;
+    border:1px solid var(--line); border-radius:6px; color:var(--ink);
+    background:var(--bg-panel); font-family:inherit; margin-bottom:8px;
+  }
+
   .home-away-badge{
     margin-left:auto; padding:3px 10px; border-radius:999px;
     font-size:11px; font-weight:700; color:#fff; flex-shrink:0;
@@ -374,43 +405,43 @@
 
   /* ---------- LINEUPS ---------- */
   .lineup-head{
-    display:flex; flex-wrap:wrap; align-items:center; gap:16px;
-    margin-bottom:24px;
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    margin-bottom:14px;
   }
-  .lineup-head .field{margin:0; min-width:150px;}
-  .lineup-head input[type=date]{width:100%;}
+  .lineup-head .field{margin:0; min-width:130px;}
+  .lineup-head input[type=date]{width:100%; padding:7px 10px; font-size:13px;}
 
   .lineup-grid{
-    display:grid; grid-template-columns:1fr 1fr; gap:20px;
-    margin-bottom:28px;
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    margin-bottom:16px;
   }
   .lineup-card{
     border:1px solid var(--line); border-radius:10px; overflow:hidden;
     background:var(--bg-panel);
   }
   .lineup-card-head{
-    display:flex; align-items:center; gap:8px;
-    padding:10px 12px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:6px;
+    padding:7px 10px; border-bottom:1px solid var(--line);
   }
   .lineup-card-head img{
-    width:28px; height:28px; border-radius:50%; object-fit:cover;
+    width:22px; height:22px; border-radius:50%; object-fit:cover;
     border:2px solid var(--gold-dim); background:var(--steel); flex-shrink:0;
   }
-  .lineup-card-head select{flex:1; font-weight:700; font-size:13px; padding:6px 8px;}
+  .lineup-card-head select{flex:1; font-weight:700; font-size:12px; padding:4px 6px;}
   .lineup-card.team-a .lineup-card-head{border-left:4px solid #6fae7c;}
   .lineup-card.team-b .lineup-card-head{border-left:4px solid #e0913f;}
-  .lineup-table{width:100%; border-collapse:collapse; font-size:12px;}
+  .lineup-table{width:100%; border-collapse:collapse; font-size:11px;}
   .lineup-table th{
-    text-align:left; padding:5px 8px; font-size:10.5px;
+    text-align:left; padding:3px 6px; font-size:9.5px;
     color:var(--ink-soft); border-bottom:1px solid var(--line);
   }
-  .lineup-table td{padding:2px 8px; border-bottom:1px solid rgba(212,175,55,0.14);}
+  .lineup-table td{padding:1px 6px; border-bottom:1px solid rgba(212,175,55,0.14);}
   .lineup-table td.order{
-    width:26px; text-align:center; font-family:'Black Han Sans',sans-serif;
-    color:var(--gold-deep); font-size:11.5px;
+    width:22px; text-align:center; font-family:'Black Han Sans',sans-serif;
+    color:var(--gold-deep); font-size:10.5px;
   }
-  .lineup-table input[type=text]{width:100%; padding:4px 6px; font-size:12px;}
-  .lineup-table select{width:100%; padding:4px 4px; font-size:11px;}
+  .lineup-table input[type=text]{width:100%; padding:3px 5px; font-size:11px;}
+  .lineup-table select{width:100%; padding:3px 3px; font-size:10px;}
   .team-a .lineup-table td.order{color:#4f9d63;}
   .team-b .lineup-table td.order{color:#c96f1c;}
   .lineup-table tr.dup-row{background:rgba(193,72,63,0.10);}
@@ -418,24 +449,24 @@
     background:rgba(193,72,63,0.14); border-color:var(--danger); color:var(--danger);
   }
 
-  .field-inline{padding:10px 12px 12px; border-top:1px solid var(--line);}
-  .field-inline h4{margin:0 0 8px; font-size:12px; color:var(--gold-deep);}
-  .field-inline .field-photo{max-width:260px; margin:0 auto;}
+  .field-inline{padding:6px 10px 8px; border-top:1px solid var(--line);}
+  .field-inline h4{margin:0 0 5px; font-size:10.5px; color:var(--gold-deep);}
+  .field-inline .field-photo{max-width:210px; margin:0 auto;}
 
   .field-photo{position:relative; width:100%; border-radius:6px; overflow:hidden; line-height:0;}
   .field-photo img{width:100%; display:block;}
   .field-chip{
     position:absolute; transform:translate(-50%,-50%);
-    padding:0.22em 0.6em; border-radius:999px;
-    font-size:8.5px; font-weight:700; line-height:1.4; white-space:nowrap;
-    color:#16211a; box-shadow:0 1px 3px rgba(0,0,0,0.35);
+    padding:0.18em 0.5em; border-radius:999px;
+    font-size:6.5px; font-weight:700; line-height:1.4; white-space:nowrap;
+    color:#16211a; box-shadow:0 1px 2px rgba(0,0,0,0.35);
   }
   .field-chip.team-a{background:#dff0e2; border:1px solid #6fae7c;}
   .field-chip.team-b{background:#fbe3c4; border:1px solid #e0913f;}
 
   @media (min-width:640px){
-    .field-inline .field-photo{max-width:320px;}
-    .field-chip{font-size:9.5px;}
+    .field-inline .field-photo{max-width:260px;}
+    .field-chip{font-size:7.5px;}
   }
 
   @media (max-width:820px){
@@ -488,18 +519,32 @@
 
   <!-- SCHEDULE -->
   <section class="panel active" id="panel-schedule">
-    <div class="calendar-card">
-      <div class="calendar-head">
-        <button type="button" class="icon-btn" id="cal-prev" title="이전 달">‹</button>
-        <div class="calendar-title" id="cal-title"></div>
-        <button type="button" class="icon-btn" id="cal-next" title="다음 달">›</button>
+    <div class="schedule-layout">
+      <div class="schedule-main">
+        <div class="calendar-card">
+          <div class="calendar-head">
+            <button type="button" class="icon-btn" id="cal-prev" title="이전 달">‹</button>
+            <div class="calendar-title" id="cal-title"></div>
+            <button type="button" class="icon-btn" id="cal-next" title="다음 달">›</button>
+          </div>
+          <div class="calendar-dow">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+        <div class="calendar-detail" id="calendar-detail" style="display:none;"></div>
       </div>
-      <div class="calendar-dow">
-        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      <div class="schedule-side">
+        <div class="notice-board">
+          <h3>📢 운영진 공지사항</h3>
+          <div class="notice-list" id="notice-list"></div>
+          <div class="notice-add">
+            <textarea id="notice-input" rows="3" placeholder="공지 내용을 입력하세요"></textarea>
+            <button type="button" class="btn btn-gold" id="notice-add-btn">등록</button>
+          </div>
+        </div>
       </div>
-      <div class="calendar-grid" id="calendar-grid"></div>
     </div>
-    <div class="calendar-detail" id="calendar-detail" style="display:none;"></div>
   </section>
 
   <!-- BATTERS -->
@@ -682,7 +727,8 @@
 
   var STORE_KEYS = {
     batters:'kbo_batters', pitchers:'kbo_pitchers', teams:'kbo_teams',
-    batterProfiles:'kbo_batter_profiles', pitcherProfiles:'kbo_pitcher_profiles'
+    batterProfiles:'kbo_batter_profiles', pitcherProfiles:'kbo_pitcher_profiles',
+    notices:'kbo_notices'
   };
 
   var SCHEMA = {
@@ -1199,7 +1245,7 @@
 
     if(tab === 'batters'){
       var totalGames = getAvailableDates('batters').length;
-      var requiredPA = totalGames * 2;
+      var requiredPA = totalGames * 1.5;
       var qualified = requiredPA > 0 ? rows.filter(function(r){ return r.pa >= requiredPA; }) : rows;
       var unqualified = requiredPA > 0 ? rows.filter(function(r){ return r.pa < requiredPA; }) : [];
 
@@ -1217,7 +1263,7 @@
         if(unqualified.length > 0){
           unqualWrap.style.display = '';
           document.getElementById('unqualified-heading').textContent =
-            '규정타석 미달 (경기수 ' + totalGames + ' × 2타석 = ' + requiredPA + '타석 미만, ' + unqualified.length + '명)';
+            '규정타석 미달 (경기수 ' + totalGames + ' × 1.5타석 = ' + requiredPA + '타석 미만, ' + unqualified.length + '명)';
           var uTable = document.getElementById('table-batters-unqualified');
           var uThead = uTable.querySelector('thead');
           var uTbody = uTable.querySelector('tbody');
@@ -2277,10 +2323,67 @@
     state.activeTab = tab;
   }
 
+  // ---------- NOTICE BOARD (운영진 공지사항) ----------
+  function loadNotices(){
+    try{
+      var raw = localStorage.getItem(STORE_KEYS.notices);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveNotices(){ localStorage.setItem(STORE_KEYS.notices, JSON.stringify(state.notices)); }
+
+  state.notices = loadNotices();
+
+  function formatNoticeDate(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + '.' + pad2(d.getMonth()+1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
+  function renderNotices(){
+    var listEl = document.getElementById('notice-list');
+    if(!listEl) return;
+    if(state.notices.length === 0){
+      listEl.innerHTML = '<div class="notice-empty">등록된 공지사항이 없습니다.</div>';
+      return;
+    }
+    var sorted = state.notices.slice().sort(function(a,b){ return b.ts - a.ts; });
+    listEl.innerHTML = sorted.map(function(n){
+      return '<div class="notice-item">' +
+        '<button type="button" class="notice-del" data-id="' + n.id + '" title="삭제">✕</button>' +
+        '<div class="notice-text">' + escapeHtml(n.text) + '</div>' +
+        '<div class="notice-date">' + formatNoticeDate(n.ts) + '</div>' +
+      '</div>';
+    }).join('');
+
+    listEl.querySelectorAll('.notice-del').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.dataset.id;
+        if(!confirm('이 공지를 삭제할까요?')) return;
+        state.notices = state.notices.filter(function(n){ return n.id !== id; });
+        saveNotices();
+        renderNotices();
+      });
+    });
+  }
+
+  var noticeInput = document.getElementById('notice-input');
+  var noticeAddBtn = document.getElementById('notice-add-btn');
+  if(noticeAddBtn){
+    noticeAddBtn.addEventListener('click', function(){
+      var text = (noticeInput.value || '').trim();
+      if(!text) return;
+      state.notices.push({ id: uid(), text: text, ts: Date.now() });
+      saveNotices();
+      noticeInput.value = '';
+      renderNotices();
+    });
+  }
+
   // ---------- INIT ----------
   Object.keys(SCHEMA).forEach(renderTable);
   renderLineups();
   renderCalendar();
+  renderNotices();
 
 })();
 </script>

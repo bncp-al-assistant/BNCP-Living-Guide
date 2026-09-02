@@ -133,6 +133,27 @@
   }
   .view-btn.active{background:var(--bg-panel); color:var(--gold-deep); box-shadow:0 1px 3px rgba(20,20,30,0.15);}
 
+  .date-filter{position:relative; display:inline-block;}
+  .date-filter-panel{
+    display:none;
+    position:absolute; top:calc(100% + 6px); left:0; z-index:60;
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:8px;
+    box-shadow:0 12px 30px rgba(20,20,30,0.18);
+    padding:8px; min-width:180px; max-height:240px; overflow-y:auto;
+  }
+  .date-filter-panel.open{display:block;}
+  .date-filter-option{
+    display:flex; align-items:center; gap:8px;
+    padding:6px 8px; border-radius:6px; font-size:13px; cursor:pointer;
+  }
+  .date-filter-option:hover{background:var(--bg-soft);}
+  .date-filter-option input{cursor:pointer;}
+  .date-filter-empty{padding:8px; font-size:12.5px; color:var(--ink-soft);}
+  .date-filter-clear{
+    width:100%; text-align:center; margin-top:6px; padding:6px;
+    font-size:12px; color:var(--gold-deep); background:none; border:none; border-top:1px solid var(--line);
+  }
+
   .toolbar{
     display:flex;
     flex-wrap:wrap;
@@ -386,7 +407,11 @@
       <div class="toolbar-left">
         <label for="sort-batters">정렬 기준</label>
         <select id="sort-batters"></select>
-        <input type="text" id="search-batters" placeholder="이름 또는 날짜 검색" style="min-width:180px;">
+        <input type="text" id="search-name-batters" placeholder="이름 검색" style="min-width:140px;">
+        <div class="date-filter" id="date-filter-batters" style="display:none;">
+          <button type="button" class="btn btn-ghost" id="date-filter-toggle">날짜 선택 ▾</button>
+          <div class="date-filter-panel" id="date-filter-panel"></div>
+        </div>
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-ghost" id="open-import">기록 붙여넣기</button>
@@ -728,23 +753,95 @@
 
   // ---------- VIEW MODE (전체 / 일자별) ----------
   state.mode = { batters:'overall', pitchers:'overall' };
-  state.search = { batters:'' };
+  state.search = { batters: { name:'', dates: [] } };
 
-  var searchBattersInput = document.getElementById('search-batters');
-  if(searchBattersInput){
-    searchBattersInput.addEventListener('input', function(){
-      state.search.batters = searchBattersInput.value;
+  var searchNameBatters = document.getElementById('search-name-batters');
+  var dateFilterWrap = document.getElementById('date-filter-batters');
+  var dateFilterToggle = document.getElementById('date-filter-toggle');
+  var dateFilterPanel = document.getElementById('date-filter-panel');
+
+  if(searchNameBatters){
+    searchNameBatters.addEventListener('input', function(){
+      state.search.batters.name = searchNameBatters.value;
       renderTable('batters');
     });
   }
 
-  function matchesSearch(row, query, hasDate){
-    if(!query) return true;
-    var q = query.trim().toLowerCase();
-    if(!q) return true;
-    var nameMatch = (row.name || '').toLowerCase().indexOf(q) !== -1;
-    var dateMatch = hasDate && (row.date || '').toLowerCase().indexOf(q) !== -1;
-    return nameMatch || dateMatch;
+  function getAvailableDates(tab){
+    var set = {};
+    state[tab].forEach(function(log){ if(log.date) set[log.date] = true; });
+    return Object.keys(set).sort().reverse();
+  }
+
+  function renderDateFilterPanel(){
+    var dates = getAvailableDates('batters');
+    var selected = state.search.batters.dates;
+    var count = selected.length;
+    dateFilterToggle.textContent = count > 0 ? ('날짜 선택 (' + count + ') ▾') : '날짜 선택 ▾';
+
+    if(dates.length === 0){
+      dateFilterPanel.innerHTML = '<div class="date-filter-empty">기록된 날짜가 없습니다</div>';
+      return;
+    }
+    var html = dates.map(function(d){
+      var checked = selected.indexOf(d) !== -1 ? 'checked' : '';
+      return '<label class="date-filter-option"><input type="checkbox" data-date="' + d + '" ' + checked + '>' + d + '</label>';
+    }).join('');
+    html += '<button type="button" class="date-filter-clear" id="date-filter-clear-btn">전체 선택 해제</button>';
+    dateFilterPanel.innerHTML = html;
+
+    dateFilterPanel.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        var d = cb.dataset.date;
+        var arr = state.search.batters.dates;
+        var idx = arr.indexOf(d);
+        if(cb.checked && idx === -1) arr.push(d);
+        if(!cb.checked && idx !== -1) arr.splice(idx, 1);
+        dateFilterToggle.textContent = arr.length > 0 ? ('날짜 선택 (' + arr.length + ') ▾') : '날짜 선택 ▾';
+        renderTable('batters');
+      });
+    });
+    var clearBtn = document.getElementById('date-filter-clear-btn');
+    if(clearBtn){
+      clearBtn.addEventListener('click', function(){
+        state.search.batters.dates = [];
+        renderDateFilterPanel();
+        renderTable('batters');
+      });
+    }
+  }
+
+  if(dateFilterToggle){
+    dateFilterToggle.addEventListener('click', function(e){
+      e.stopPropagation();
+      var willOpen = !dateFilterPanel.classList.contains('open');
+      if(willOpen) renderDateFilterPanel();
+      dateFilterPanel.classList.toggle('open', willOpen);
+    });
+    document.addEventListener('click', function(e){
+      if(dateFilterPanel.classList.contains('open') && !dateFilterWrap.contains(e.target)){
+        dateFilterPanel.classList.remove('open');
+      }
+    });
+  }
+
+  function updateSearchVisibility(tab){
+    if(tab !== 'batters') return;
+    if(dateFilterWrap){
+      dateFilterWrap.style.display = (state.mode.batters === 'bydate') ? '' : 'none';
+      if(state.mode.batters !== 'bydate') dateFilterPanel.classList.remove('open');
+    }
+  }
+  updateSearchVisibility('batters');
+
+  function matchesSearch(row, search, hasDate){
+    if(!search) return true;
+    var nameQ = (search.name || '').trim().toLowerCase();
+    if(nameQ && (row.name || '').toLowerCase().indexOf(nameQ) === -1) return false;
+    if(hasDate && search.dates && search.dates.length > 0){
+      if(search.dates.indexOf(row.date) === -1) return false;
+    }
+    return true;
   }
 
   document.querySelectorAll('.view-btn').forEach(function(btn){
@@ -764,6 +861,7 @@
         state.dir[tab] = 'desc';
       }
       populateSortSelect(tab);
+      updateSearchVisibility(tab);
       renderTable(tab);
     });
   });
@@ -913,8 +1011,8 @@
     });
 
     var rows = sortGeneric(aggregateRows(tab), state.sort[tab], state.dir[tab], s.columns);
-    var query = (state.search && state.search[tab]) || '';
-    if(query) rows = rows.filter(function(r){ return matchesSearch(r, query, false); });
+    var searchObj = state.search && state.search[tab];
+    if(searchObj) rows = rows.filter(function(r){ return matchesSearch(r, searchObj, false); });
     if(rows.length === 0){
       tbody.innerHTML = '';
       emptyEl.style.display = 'block';
@@ -975,6 +1073,11 @@
     var tbody = table.querySelector('tbody');
     var emptyEl = document.getElementById('empty-' + tab);
 
+    if(tab === 'batters' && dateFilterToggle){
+      var selCount = state.search.batters.dates.length;
+      dateFilterToggle.textContent = selCount > 0 ? ('날짜 선택 (' + selCount + ') ▾') : '날짜 선택 ▾';
+    }
+
     var headHtml = '<tr><th class="num ' + (state.sort[tab]==='date'?('sorted '+state.dir[tab]):'') + '" data-key="date">날짜</th><th>선수</th>';
     s.columns.forEach(function(c){
       if(c.type === 'computed') return;
@@ -1000,8 +1103,8 @@
     });
 
     var rows = sortRows(tab);
-    var query2 = (state.search && state.search[tab]) || '';
-    if(query2) rows = rows.filter(function(r){ return matchesSearch(r, query2, true); });
+    var searchObj2 = state.search && state.search[tab];
+    if(searchObj2) rows = rows.filter(function(r){ return matchesSearch(r, searchObj2, true); });
     if(rows.length === 0){
       tbody.innerHTML = '';
       emptyEl.style.display = 'block';

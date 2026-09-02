@@ -167,6 +167,45 @@
     background:var(--bg-soft); color:var(--ink-soft); box-shadow:none;
   }
 
+  /* ---------- CALENDAR ---------- */
+  .calendar-card{
+    border:1px solid var(--line); border-radius:12px; background:var(--bg-panel);
+    padding:20px; max-width:560px;
+  }
+  .calendar-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+  }
+  .calendar-title{font-family:'Black Han Sans',sans-serif; font-size:20px; color:var(--ink);}
+  .calendar-dow{
+    display:grid; grid-template-columns:repeat(7,1fr); text-align:center;
+    font-size:12px; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .cal-day{
+    position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    border-radius:8px; font-size:13px; color:var(--ink); cursor:default;
+    background:var(--bg-soft);
+  }
+  .cal-day.empty{background:none;}
+  .cal-day.has-game{
+    background:linear-gradient(180deg, var(--gold-pale), var(--gold)); color:var(--navy-deep);
+    font-weight:700; cursor:pointer;
+  }
+  .cal-day.has-game:hover{filter:brightness(1.05);}
+  .cal-day.selected{box-shadow:0 0 0 2px var(--gold-deep);}
+  .cal-day.is-today{box-shadow:0 0 0 2px var(--steel);}
+
+  .calendar-detail{
+    max-width:560px; margin-top:16px; padding:16px 18px;
+    border:1px solid var(--line); border-radius:10px; background:var(--bg-panel);
+  }
+  .calendar-detail h4{margin:0 0 10px; font-size:15px; color:var(--gold-deep);}
+  .calendar-detail .cd-teams{display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;}
+  .calendar-detail .cd-team{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink);}
+  .calendar-detail .cd-team img{width:26px; height:26px; border-radius:50%; object-fit:cover; border:1px solid var(--gold-dim);}
+  .calendar-detail .cd-stats{font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;}
+  .calendar-detail .cd-actions{display:flex; gap:8px;}
+
   .toolbar{
     display:flex;
     flex-wrap:wrap;
@@ -402,16 +441,33 @@
 
 
 <nav class="tabbar">
-  <button class="tab-btn active" data-tab="batters">타자 기록</button>
-  <button class="tab-btn" data-tab="pitchers">투수 기록</button>
+  <button class="tab-btn active" data-tab="schedule">경기 일정</button>
   <button class="tab-btn" data-tab="teams">팀 순위</button>
+  <button class="tab-btn" data-tab="batters">타자 기록</button>
+  <button class="tab-btn" data-tab="pitchers">투수 기록</button>
   <button class="tab-btn" data-tab="lineups">라인업</button>
 </nav>
 
 <main>
 
+  <!-- SCHEDULE -->
+  <section class="panel active" id="panel-schedule">
+    <div class="calendar-card">
+      <div class="calendar-head">
+        <button type="button" class="icon-btn" id="cal-prev" title="이전 달">‹</button>
+        <div class="calendar-title" id="cal-title"></div>
+        <button type="button" class="icon-btn" id="cal-next" title="다음 달">›</button>
+      </div>
+      <div class="calendar-dow">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </div>
+    <div class="calendar-detail" id="calendar-detail" style="display:none;"></div>
+  </section>
+
   <!-- BATTERS -->
-  <section class="panel active" id="panel-batters">
+  <section class="panel" id="panel-batters">
     <div class="view-toggle">
       <button class="view-btn active" data-view-tab="batters" data-view="overall">전체</button>
       <button class="view-btn" data-view-tab="batters" data-view="bydate">일자별</button>
@@ -753,7 +809,7 @@
     batters: load('batters'),
     pitchers: load('pitchers'),
     teams: load('teams'),
-    activeTab: 'batters',
+    activeTab: 'schedule',
     sort: { batters:'avg', pitchers:'wins', teams:'wpct' },
     dir: { batters:'desc', pitchers:'desc', teams:'desc' },
     editing: null // {tab, id} or null when adding
@@ -1121,10 +1177,8 @@
       if(rows.length === 0) emptyEl.style.display = 'block';
 
       if(unqualWrap){
-        console.log('DEBUG unqualified.length=', unqualified.length, 'wrap found=', !!unqualWrap);
         if(unqualified.length > 0){
           unqualWrap.style.display = '';
-          console.log('DEBUG set display to empty, now=', unqualWrap.style.display, unqualWrap.getAttribute('style'));
           document.getElementById('unqualified-heading').textContent =
             '규정타석 미달 (경기수 ' + totalGames + ' × 2타석 = ' + requiredPA + '타석 미만, ' + unqualified.length + '명)';
           var uTable = document.getElementById('table-batters-unqualified');
@@ -1153,8 +1207,6 @@
       }
       return;
     }
-
-    if(unqualWrap) unqualWrap.style.display = 'none';
 
     if(rows.length === 0){
       tbody.innerHTML = '';
@@ -1900,9 +1952,141 @@
     }
   });
 
+  // ---------- CALENDAR (경기 일정) ----------
+  function pad2(n){ return n < 10 ? '0' + n : String(n); }
+  function ymd(y, m, d){ return y + '-' + pad2(m + 1) + '-' + pad2(d); }
+
+  function getAllGameDates(){
+    var set = {};
+    state.batters.forEach(function(l){ if(l.date) set[l.date] = true; });
+    state.pitchers.forEach(function(l){ if(l.date) set[l.date] = true; });
+    state.lineups.forEach(function(l){ if(l.date) set[l.date] = true; });
+    return Object.keys(set).sort();
+  }
+
+  function initCalendarMonth(){
+    var dates = getAllGameDates();
+    var base = dates.length ? dates[dates.length - 1] : new Date().toISOString().slice(0,10);
+    var parts = base.split('-');
+    return { year: Number(parts[0]), month: Number(parts[1]) - 1 };
+  }
+  state.calendar = initCalendarMonth();
+  state.calendarSelected = null;
+
+  var calGrid = document.getElementById('calendar-grid');
+  var calTitle = document.getElementById('cal-title');
+  var calDetail = document.getElementById('calendar-detail');
+
+  document.getElementById('cal-prev').addEventListener('click', function(){
+    state.calendar.month--;
+    if(state.calendar.month < 0){ state.calendar.month = 11; state.calendar.year--; }
+    calDetail.style.display = 'none';
+    state.calendarSelected = null;
+    renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click', function(){
+    state.calendar.month++;
+    if(state.calendar.month > 11){ state.calendar.month = 0; state.calendar.year++; }
+    calDetail.style.display = 'none';
+    state.calendarSelected = null;
+    renderCalendar();
+  });
+
+  function renderCalendar(){
+    var y = state.calendar.year, m = state.calendar.month;
+    calTitle.textContent = y + '년 ' + (m + 1) + '월';
+
+    var gameDates = getAllGameDates();
+    var todayStr = new Date().toISOString().slice(0,10);
+    var firstDow = new Date(y, m, 1).getDay();
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    var html = '';
+    for(var i = 0; i < firstDow; i++){
+      html += '<div class="cal-day empty"></div>';
+    }
+    for(var d = 1; d <= daysInMonth; d++){
+      var dateStr = ymd(y, m, d);
+      var hasGame = gameDates.indexOf(dateStr) !== -1;
+      var classes = 'cal-day' + (hasGame ? ' has-game' : '') + (dateStr === todayStr ? ' is-today' : '') + (dateStr === state.calendarSelected ? ' selected' : '');
+      html += '<div class="' + classes + '" data-date="' + dateStr + '">' + d + '</div>';
+    }
+    calGrid.innerHTML = html;
+
+    calGrid.querySelectorAll('.cal-day.has-game').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.calendarSelected = el.dataset.date;
+        renderCalendar();
+        showCalendarDetail(el.dataset.date);
+      });
+    });
+  }
+
+  function showCalendarDetail(dateStr){
+    var lineupsForDate = state.lineups.filter(function(l){ return l.date === dateStr; });
+    var batterCount = state.batters.filter(function(l){ return l.date === dateStr; }).length;
+    var pitcherCount = state.pitchers.filter(function(l){ return l.date === dateStr; }).length;
+
+    var teamsHtml = '';
+    if(lineupsForDate.length){
+      var lu = lineupsForDate[0];
+      var teamA = teamById(lu.teamAId), teamB = teamById(lu.teamBId);
+      teamsHtml = '<div class="cd-teams">';
+      [teamA, teamB].forEach(function(t){
+        if(!t) return;
+        teamsHtml += '<div class="cd-team">' +
+          (t.photo ? '<img src="' + t.photo + '" alt="">' : '') +
+          '<span>' + escapeHtml(t.name) + '</span></div>';
+      });
+      teamsHtml += '</div>';
+    }
+
+    calDetail.innerHTML =
+      '<h4>' + dateStr + '</h4>' +
+      teamsHtml +
+      '<div class="cd-stats">타자 기록 ' + batterCount + '건 · 투수 기록 ' + pitcherCount + '건' +
+        (lineupsForDate.length ? ' · 라인업 등록됨' : '') + '</div>' +
+      '<div class="cd-actions">' +
+        '<button type="button" class="btn btn-ghost" id="cd-go-batters">타자 기록 보기</button>' +
+        (lineupsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button>' : '') +
+      '</div>';
+    calDetail.style.display = '';
+
+    document.getElementById('cd-go-batters').addEventListener('click', function(){
+      switchToTab('batters');
+      state.mode.batters = 'bydate';
+      document.querySelectorAll('.view-btn[data-view-tab="batters"]').forEach(function(b){
+        b.classList.toggle('active', b.dataset.view === 'bydate');
+      });
+      state.sort.batters = 'date';
+      state.dir.batters = 'desc';
+      populateSortSelect('batters');
+      updateSearchVisibility('batters');
+      state.search.batters.dates = [dateStr];
+      renderTable('batters');
+    });
+
+    var goLineupBtn = document.getElementById('cd-go-lineup');
+    if(goLineupBtn){
+      goLineupBtn.addEventListener('click', function(){
+        switchToTab('lineups');
+        state.activeLineupId = lineupsForDate[0].id;
+        renderLineups();
+      });
+    }
+  }
+
+  function switchToTab(tab){
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    document.getElementById('panel-' + tab).classList.add('active');
+    state.activeTab = tab;
+  }
+
   // ---------- INIT ----------
   Object.keys(SCHEMA).forEach(renderTable);
   renderLineups();
+  renderCalendar();
 
 })();
 </script>

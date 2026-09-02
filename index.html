@@ -386,6 +386,7 @@
       <div class="toolbar-left">
         <label for="sort-batters">정렬 기준</label>
         <select id="sort-batters"></select>
+        <input type="text" id="search-batters" placeholder="이름 또는 날짜 검색" style="min-width:180px;">
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-ghost" id="open-import">기록 붙여넣기</button>
@@ -727,6 +728,24 @@
 
   // ---------- VIEW MODE (전체 / 일자별) ----------
   state.mode = { batters:'overall', pitchers:'overall' };
+  state.search = { batters:'' };
+
+  var searchBattersInput = document.getElementById('search-batters');
+  if(searchBattersInput){
+    searchBattersInput.addEventListener('input', function(){
+      state.search.batters = searchBattersInput.value;
+      renderTable('batters');
+    });
+  }
+
+  function matchesSearch(row, query, hasDate){
+    if(!query) return true;
+    var q = query.trim().toLowerCase();
+    if(!q) return true;
+    var nameMatch = (row.name || '').toLowerCase().indexOf(q) !== -1;
+    var dateMatch = hasDate && (row.date || '').toLowerCase().indexOf(q) !== -1;
+    return nameMatch || dateMatch;
+  }
 
   document.querySelectorAll('.view-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -894,6 +913,8 @@
     });
 
     var rows = sortGeneric(aggregateRows(tab), state.sort[tab], state.dir[tab], s.columns);
+    var query = (state.search && state.search[tab]) || '';
+    if(query) rows = rows.filter(function(r){ return matchesSearch(r, query, false); });
     if(rows.length === 0){
       tbody.innerHTML = '';
       emptyEl.style.display = 'block';
@@ -979,6 +1000,8 @@
     });
 
     var rows = sortRows(tab);
+    var query2 = (state.search && state.search[tab]) || '';
+    if(query2) rows = rows.filter(function(r){ return matchesSearch(r, query2, true); });
     if(rows.length === 0){
       tbody.innerHTML = '';
       emptyEl.style.display = 'block';

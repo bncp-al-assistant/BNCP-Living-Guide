@@ -154,6 +154,19 @@
     font-size:12px; color:var(--gold-deep); background:none; border:none; border-top:1px solid var(--line);
   }
 
+  .unqualified-heading{
+    margin:26px 0 10px; font-size:13px; color:var(--ink-soft);
+    display:flex; align-items:center; gap:8px;
+  }
+  .unqualified-heading::before{
+    content:""; width:20px; height:1px; background:var(--line); display:inline-block;
+  }
+  .unqualified-table-wrap{opacity:0.82;}
+  .unqualified-table-wrap thead th{background:var(--bg-soft); color:var(--ink-soft);}
+  .unqualified-table-wrap .rank-badge{
+    background:var(--bg-soft); color:var(--ink-soft); box-shadow:none;
+  }
+
   .toolbar{
     display:flex;
     flex-wrap:wrap;
@@ -429,6 +442,15 @@
       <div class="empty-state" id="empty-batters" style="display:none;">
         <div class="display">아직 등록된 기록이 없습니다</div>
         <div>‘+ 기록 추가’로 첫 기록을 올리거나, ‘기록 붙여넣기’로 표를 한 번에 가져오세요.</div>
+      </div>
+    </div>
+    <div id="unqualified-wrap" style="display:none;">
+      <div class="unqualified-heading" id="unqualified-heading"></div>
+      <div class="table-wrap unqualified-table-wrap">
+        <table id="table-batters-unqualified">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -997,6 +1019,55 @@
     }
   }
 
+  function buildStatRowsHtml(rows, tab, s, mutedBadge){
+    return rows.map(function(row, idx){
+      var rank = idx + 1;
+      var badgeClass = (rank === 1 && !mutedBadge) ? 'rank-badge r1' : 'rank-badge';
+      var photo = row.photo
+        ? '<img class="avatar" src="' + row.photo + '" alt="">'
+        : '<div class="avatar placeholder">' + (row.name ? row.name.charAt(0) : '?') + '</div>';
+      var playerCell = '<div class="player-cell">' + photo +
+        '<div class="name-team"><span class="name">' + escapeHtml(row.name) + '</span>' +
+        (row.team ? '<span class="team">' + escapeHtml(row.team) + '</span>' : '') + '</div></div>';
+
+      var statCells = s.columns.map(function(c){
+        var val = c.type === 'computed' ? c.compute(row) : row[c.key];
+        return '<td class="num">' + c.fmt(val) + '</td>';
+      }).join('');
+
+      return '<tr>' +
+        '<td class="num"><span class="' + badgeClass + '">' + rank + '</span></td>' +
+        '<td>' + playerCell + '</td>' +
+        statCells +
+        '<td><div class="row-actions">' +
+          '<button class="icon-btn" data-profile-edit="' + tab + '" data-key="' + row.id + '" title="프로필 수정">✎</button>' +
+          '<button class="icon-btn danger" data-player-del="' + tab + '" data-key="' + row.id + '" data-name="' + escapeHtml(row.name) + '" title="삭제">✕</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function wireStatRowActions(tbody){
+    tbody.querySelectorAll('[data-profile-edit]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        openProfileModal(btn.dataset.profileEdit, btn.dataset.key);
+      });
+    });
+    tbody.querySelectorAll('[data-player-del]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var t = btn.dataset.playerDel, key = btn.dataset.key, name = btn.dataset.name;
+        if(confirm(name + '의 모든 기록을 삭제할까요? (일자별 기록 전체가 삭제됩니다)')){
+          state[t] = state[t].filter(function(log){ return (log.name||'').trim().toLowerCase() !== key; });
+          var profiles = loadProfiles(t);
+          delete profiles[key];
+          saveProfiles(t, profiles);
+          save(t);
+          renderTable(t);
+        }
+      });
+    });
+  }
+
   function renderOverallTable(tab){
     var s = SCHEMA[tab];
     var table = document.getElementById('table-' + tab);
@@ -1030,6 +1101,61 @@
     var rows = sortGeneric(aggregateRows(tab), state.sort[tab], state.dir[tab], s.columns);
     var searchObj = state.search && state.search[tab];
     if(searchObj) rows = rows.filter(function(r){ return matchesSearch(r, searchObj, false); });
+
+    var unqualWrap = document.getElementById('unqualified-wrap');
+
+    if(tab === 'batters'){
+      var totalGames = getAvailableDates('batters').length;
+      var requiredPA = totalGames * 2;
+      var qualified = requiredPA > 0 ? rows.filter(function(r){ return r.pa >= requiredPA; }) : rows;
+      var unqualified = requiredPA > 0 ? rows.filter(function(r){ return r.pa < requiredPA; }) : [];
+
+      if(qualified.length === 0){
+        tbody.innerHTML = '';
+        emptyEl.style.display = rows.length === 0 ? 'block' : 'none';
+      } else {
+        emptyEl.style.display = 'none';
+        tbody.innerHTML = buildStatRowsHtml(qualified, tab, s, false);
+        wireStatRowActions(tbody);
+      }
+      if(rows.length === 0) emptyEl.style.display = 'block';
+
+      if(unqualWrap){
+        console.log('DEBUG unqualified.length=', unqualified.length, 'wrap found=', !!unqualWrap);
+        if(unqualified.length > 0){
+          unqualWrap.style.display = '';
+          console.log('DEBUG set display to empty, now=', unqualWrap.style.display, unqualWrap.getAttribute('style'));
+          document.getElementById('unqualified-heading').textContent =
+            '규정타석 미달 (경기수 ' + totalGames + ' × 2타석 = ' + requiredPA + '타석 미만, ' + unqualified.length + '명)';
+          var uTable = document.getElementById('table-batters-unqualified');
+          var uThead = uTable.querySelector('thead');
+          var uTbody = uTable.querySelector('tbody');
+          uThead.innerHTML = headHtml;
+          uThead.querySelectorAll('th[data-key]').forEach(function(th){
+            th.addEventListener('click', function(){
+              var key = th.dataset.key;
+              if(state.sort[tab] === key){
+                state.dir[tab] = state.dir[tab] === 'asc' ? 'desc' : 'asc';
+              } else {
+                state.sort[tab] = key;
+                var col = s.columns.filter(function(c){ return c.key === key; })[0];
+                state.dir[tab] = (col && col.better) ? col.better : 'desc';
+              }
+              document.getElementById('sort-' + tab).value = state.sort[tab];
+              renderTable(tab);
+            });
+          });
+          uTbody.innerHTML = buildStatRowsHtml(unqualified, tab, s, true);
+          wireStatRowActions(uTbody);
+        } else {
+          unqualWrap.style.display = 'none';
+        }
+      }
+      return;
+    }
+
+    if(unqualWrap) unqualWrap.style.display = 'none';
+
     if(rows.length === 0){
       tbody.innerHTML = '';
       emptyEl.style.display = 'block';
@@ -1037,50 +1163,8 @@
     }
     emptyEl.style.display = 'none';
 
-    tbody.innerHTML = rows.map(function(row, idx){
-      var rank = idx + 1;
-      var badgeClass = rank === 1 ? 'rank-badge r1' : 'rank-badge';
-      var photo = row.photo
-        ? '<img class="avatar" src="' + row.photo + '" alt="">'
-        : '<div class="avatar placeholder">' + (row.name ? row.name.charAt(0) : '?') + '</div>';
-      var playerCell = '<div class="player-cell">' + photo +
-        '<div class="name-team"><span class="name">' + escapeHtml(row.name) + '</span>' +
-        (row.team ? '<span class="team">' + escapeHtml(row.team) + '</span>' : '') + '</div></div>';
-
-      var statCells = s.columns.map(function(c){
-        var val = c.type === 'computed' ? c.compute(row) : row[c.key];
-        return '<td class="num">' + c.fmt(val) + '</td>';
-      }).join('');
-
-      return '<tr>' +
-        '<td class="num"><span class="' + badgeClass + '">' + rank + '</span></td>' +
-        '<td>' + playerCell + '</td>' +
-        statCells +
-        '<td><div class="row-actions">' +
-          '<button class="icon-btn" data-profile-edit="' + tab + '" data-key="' + row.id + '" title="프로필 수정">✎</button>' +
-          '<button class="icon-btn danger" data-player-del="' + tab + '" data-key="' + row.id + '" data-name="' + escapeHtml(row.name) + '" title="삭제">✕</button>' +
-        '</div></td>' +
-      '</tr>';
-    }).join('');
-
-    tbody.querySelectorAll('[data-profile-edit]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        openProfileModal(btn.dataset.profileEdit, btn.dataset.key);
-      });
-    });
-    tbody.querySelectorAll('[data-player-del]').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var t = btn.dataset.playerDel, key = btn.dataset.key, name = btn.dataset.name;
-        if(confirm(name + '의 모든 기록을 삭제할까요? (일자별 기록 전체가 삭제됩니다)')){
-          state[t] = state[t].filter(function(log){ return (log.name||'').trim().toLowerCase() !== key; });
-          var profiles = loadProfiles(t);
-          delete profiles[key];
-          saveProfiles(t, profiles);
-          save(t);
-          renderTable(t);
-        }
-      });
-    });
+    tbody.innerHTML = buildStatRowsHtml(rows, tab, s, false);
+    wireStatRowActions(tbody);
   }
 
   function renderByDateTable(tab){

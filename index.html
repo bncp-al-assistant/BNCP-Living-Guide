@@ -251,13 +251,21 @@
     border:1px solid var(--line); border-radius:12px; background:var(--bg-panel);
     padding:18px; margin-top:16px;
   }
+  .roster-board-page{margin-top:0; padding:22px;}
   .roster-board h3{margin:0 0 12px; font-size:15px; color:var(--gold-deep);}
+  .roster-board-page .roster-teams{
+    display:grid; grid-template-columns:1fr; gap:20px;
+  }
+  @media (min-width:720px){
+    .roster-board-page .roster-teams{grid-template-columns:1fr 1fr;}
+  }
   .roster-team{margin-bottom:16px;}
   .roster-team:last-child{margin-bottom:0;}
   .roster-team-head{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
   .roster-team-head img{width:22px; height:22px; border-radius:50%; object-fit:cover; border:1px solid var(--gold-dim);}
   .roster-team-head h4{margin:0; font-size:13px; color:var(--ink);}
   .roster-list{display:flex; flex-direction:column; gap:4px; max-height:240px; overflow-y:auto;}
+  .roster-board-page .roster-list{max-height:none;}
   .roster-player{
     display:flex; justify-content:space-between; align-items:center; gap:8px;
     font-size:12px; padding:5px 8px; border-radius:6px; background:var(--bg-soft);
@@ -451,22 +459,23 @@
   .lineup-card.team-b .lineup-card-head{border-left:4px solid #e0913f;}
 
   .lineup-card-body{display:flex; flex-wrap:wrap; align-items:flex-start;}
-  .lineup-table-wrap{flex:1 1 190px; min-width:170px;}
+  .lineup-table-wrap{flex:1 1 150px; min-width:130px;}
 
   .lineup-table{width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed;}
   .lineup-table th{
-    text-align:left; padding:3px 4px; font-size:9.5px;
+    text-align:left; padding:3px 3px; font-size:9.5px;
     color:var(--ink-soft); border-bottom:1px solid var(--line);
   }
-  .lineup-table td{padding:1px 4px; border-bottom:1px solid rgba(212,175,55,0.14);}
-  .lineup-table th:first-child, .lineup-table td.order{width:18px;}
+  .lineup-table td{padding:1px 3px; border-bottom:1px solid rgba(212,175,55,0.14);}
+  .lineup-table th:first-child, .lineup-table td.order{width:16px;}
   .lineup-table td.order{
     text-align:center; font-family:'Black Han Sans',sans-serif;
     color:var(--gold-deep); font-size:10.5px;
   }
-  .lineup-table th:nth-child(2), .lineup-table td:nth-child(2){width:58px;}
+  .lineup-table th:nth-child(2), .lineup-table td:nth-child(2){width:52px;}
+  .lineup-table th:nth-child(3), .lineup-table td:nth-child(3){width:44px;}
   .lineup-table input[type=text]{width:100%; padding:3px 4px; font-size:11px;}
-  .lineup-table select{width:100%; padding:3px 2px; font-size:9.5px;}
+  .lineup-table select{width:100%; padding:3px 1px; font-size:9px;}
   .team-a .lineup-table td.order{color:#4f9d63;}
   .team-b .lineup-table td.order{color:#c96f1c;}
   .lineup-table tr.dup-row{background:rgba(193,72,63,0.10);}
@@ -475,27 +484,27 @@
   }
 
   .field-inline{
-    flex:0 0 132px; align-self:stretch;
+    flex:0 0 180px; align-self:stretch;
     padding:8px 6px 8px 8px; border-left:1px solid var(--line);
   }
   .field-inline h4{margin:0 0 4px; font-size:9px; color:var(--gold-deep); line-height:1.25;}
-  .field-inline .field-photo{max-width:120px; margin:0;}
+  .field-inline .field-photo{max-width:168px; margin:0;}
 
   .field-photo{position:relative; width:100%; border-radius:6px; overflow:hidden; line-height:0;}
   .field-photo img{width:100%; display:block;}
   .field-chip{
     position:absolute; transform:translate(-50%,-50%);
     padding:0.16em 0.42em; border-radius:999px;
-    font-size:5.6px; font-weight:700; line-height:1.4; white-space:nowrap;
+    font-size:6.4px; font-weight:700; line-height:1.4; white-space:nowrap;
     color:#16211a; box-shadow:0 1px 2px rgba(0,0,0,0.35);
   }
   .field-chip.team-a{background:#dff0e2; border:1px solid #6fae7c;}
   .field-chip.team-b{background:#fbe3c4; border:1px solid #e0913f;}
 
   @media (min-width:640px){
-    .field-inline{flex-basis:170px;}
-    .field-inline .field-photo{max-width:160px;}
-    .field-chip{font-size:6.5px;}
+    .field-inline{flex-basis:250px;}
+    .field-inline .field-photo{max-width:236px;}
+    .field-chip{font-size:7.6px;}
   }
 
   @media (max-width:820px){
@@ -504,8 +513,8 @@
   @media (max-width:420px){
     .lineup-card-body{flex-direction:column;}
     .field-inline{flex-basis:auto; border-left:none; border-top:1px solid var(--line);}
-    .field-inline .field-photo{max-width:220px; margin:0 auto;}
-    .field-chip{font-size:7px;}
+    .field-inline .field-photo{max-width:260px; margin:0 auto;}
+    .field-chip{font-size:8px;}
   }
 
   footer{
@@ -544,6 +553,7 @@
 
 <nav class="tabbar">
   <button class="tab-btn active" data-tab="schedule">경기 일정</button>
+  <button class="tab-btn" data-tab="roster">선수명단</button>
   <button class="tab-btn" data-tab="teams">팀 순위</button>
   <button class="tab-btn" data-tab="batters">타자 기록</button>
   <button class="tab-btn" data-tab="pitchers">투수 기록</button>
@@ -578,11 +588,15 @@
             <button type="button" class="btn btn-gold" id="notice-add-btn">등록</button>
           </div>
         </div>
-        <div class="roster-board">
-          <h3>👥 선수명단</h3>
-          <div class="roster-teams" id="roster-teams"></div>
-        </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ROSTER -->
+  <section class="panel" id="panel-roster">
+    <div class="roster-board roster-board-page">
+      <h3>👥 선수명단</h3>
+      <div class="roster-teams" id="roster-teams"></div>
     </div>
   </section>
 
@@ -950,10 +964,8 @@
       btn.classList.add('active');
       state.activeTab = btn.dataset.tab;
       document.getElementById('panel-' + state.activeTab).classList.add('active');
-      if(state.activeTab === 'schedule'){
-        if(typeof renderCalendar === 'function') renderCalendar();
-        if(typeof renderRoster === 'function') renderRoster();
-      }
+      if(state.activeTab === 'schedule' && typeof renderCalendar === 'function') renderCalendar();
+      if(state.activeTab === 'roster' && typeof renderRoster === 'function') renderRoster();
     });
   });
 
@@ -1172,6 +1184,16 @@
         if(p.photo) groups[key].photo = p.photo;
         if(p.team) groups[key].team = p.team;
       }
+    });
+    // Fallback: if a player's team is still blank, try to infer it from their record
+    // in the other stat sheet (e.g. a pitcher who also has batter logs with a team set).
+    var otherTab = tab === 'batters' ? 'pitchers' : 'batters';
+    order.forEach(function(key){
+      if(groups[key].team) return;
+      var match = state[otherTab].filter(function(log){
+        return (log.name || '').trim().toLowerCase() === key && log.team;
+      })[0];
+      if(match) groups[key].team = match.team;
     });
     return order.map(function(key){ return groups[key]; });
   }

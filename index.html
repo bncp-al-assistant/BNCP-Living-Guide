@@ -413,6 +413,10 @@
   .lineup-table select{width:100%; padding:6px 6px; font-size:12.5px;}
   .team-a .lineup-table td.order{color:#4f9d63;}
   .team-b .lineup-table td.order{color:#c96f1c;}
+  .lineup-table tr.dup-row{background:rgba(193,72,63,0.10);}
+  .lineup-table tr.dup-row input[type=text]{
+    background:rgba(193,72,63,0.14); border-color:var(--danger); color:var(--danger);
+  }
 
   .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
   .field-card{
@@ -1716,13 +1720,22 @@
   }
 
   function renderLineupTableHtml(slots){
+    var nameCounts = {};
+    slots.forEach(function(s){
+      var n = (s.name || '').trim();
+      if(!n) return;
+      var key = n.toLowerCase();
+      nameCounts[key] = (nameCounts[key] || 0) + 1;
+    });
     var rows = slots.map(function(slot, idx){
       var posOptions = POSITION_OPTIONS.map(function(p){
         return '<option value="' + p + '"' + (slot.position === p ? ' selected' : '') + '>' + p + '</option>';
       }).join('');
-      return '<tr>' +
+      var trimmed = (slot.name || '').trim();
+      var isDup = trimmed && nameCounts[trimmed.toLowerCase()] > 1;
+      return '<tr' + (isDup ? ' class="dup-row"' : '') + '>' +
         '<td class="order">' + (idx + 1) + '</td>' +
-        '<td><input type="text" data-slot-name data-idx="' + idx + '" value="' + escapeHtml(slot.name) + '" placeholder="이름"></td>' +
+        '<td><input type="text" data-slot-name data-idx="' + idx + '" value="' + escapeHtml(slot.name) + '" placeholder="이름"' + (isDup ? ' title="같은 이름이 중복 입력되었습니다"' : '') + '></td>' +
         '<td><select data-slot-pos data-idx="' + idx + '">' + posOptions + '</select></td>' +
       '</tr>';
     }).join('');
@@ -1753,6 +1766,56 @@
       '<div class="field-card"><h4>' + (teamB ? escapeHtml(teamB.name) : 'B팀') + ' 수비 위치</h4>' + buildFieldSVG(lu.teamBSlots, 'team-b') + '</div>';
   }
 
+  function buildLineupText(lu, teamA, teamB, aIsHome){
+    var homeTeam = aIsHome ? teamA : teamB;
+    var awayTeam = aIsHome ? teamB : teamA;
+    var homeSlots = aIsHome ? lu.teamASlots : lu.teamBSlots;
+    var awaySlots = aIsHome ? lu.teamBSlots : lu.teamASlots;
+
+    function block(team, label, slots){
+      var lines = [(team ? team.name : '팀 미정') + ' (' + label + ')'];
+      slots.forEach(function(s, idx){
+        if(!s.name && (!s.position || s.position === '-')) return;
+        lines.push((idx + 1) + '번 ' + (s.name || '') + ' ' + (s.position && s.position !== '-' ? s.position : ''));
+      });
+      return lines.join('\n');
+    }
+
+    return lu.date + ' 라인업\n\n' +
+      block(homeTeam, '홈', homeSlots) + '\n\n' +
+      block(awayTeam, '원정', awaySlots);
+  }
+
+  function copyTextToClipboard(text, btn){
+    var originalLabel = btn.textContent;
+    function done(ok){
+      btn.textContent = ok ? '복사됨!' : '복사 실패';
+      setTimeout(function(){ btn.textContent = originalLabel; }, 1500);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done){
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      done(ok);
+    }catch(e){
+      done(false);
+    }
+  }
+
   function renderLineups(){
     var emptyEl = document.getElementById('empty-lineups');
     var body = document.getElementById('lineup-body');
@@ -1777,7 +1840,8 @@
 
     var html = '<div class="lineup-head"><div class="field"><label>경기 날짜</label>' +
       '<input type="date" id="lineup-date" value="' + lu.date + '"></div>' +
-      '<button type="button" class="btn btn-ghost" id="swap-home-away">⇄ 홈/원정 전환</button></div>';
+      '<button type="button" class="btn btn-ghost" id="swap-home-away">⇄ 홈/원정 전환</button>' +
+      '<button type="button" class="btn btn-gold" id="copy-lineup">📋 라인업 복사</button></div>';
 
     html += '<div class="lineup-grid">';
     html += '<div class="lineup-card team-a"><div class="lineup-card-head">' +
@@ -1818,10 +1882,16 @@
       renderLineups();
     });
 
+    document.getElementById('copy-lineup').addEventListener('click', function(){
+      var text = buildLineupText(lu, teamA, teamB, aIsHome);
+      copyTextToClipboard(text, this);
+    });
+
     body.querySelectorAll('.team-a [data-slot-name]').forEach(function(input){
       input.addEventListener('input', function(){
         lu.teamASlots[Number(this.dataset.idx)].name = this.value;
         saveLineups(); refreshFieldOnly(lu);
+        updateDupHighlight(body.querySelector('.lineup-card.team-a'), lu.teamASlots);
       });
     });
     body.querySelectorAll('.team-a [data-slot-pos]').forEach(function(sel){
@@ -1834,6 +1904,7 @@
       input.addEventListener('input', function(){
         lu.teamBSlots[Number(this.dataset.idx)].name = this.value;
         saveLineups(); refreshFieldOnly(lu);
+        updateDupHighlight(body.querySelector('.lineup-card.team-b'), lu.teamBSlots);
       });
     });
     body.querySelectorAll('.team-b [data-slot-pos]').forEach(function(sel){
@@ -1841,6 +1912,22 @@
         lu.teamBSlots[Number(this.dataset.idx)].position = this.value;
         saveLineups(); refreshFieldOnly(lu);
       });
+    });
+  }
+
+  function updateDupHighlight(cardEl, slots){
+    if(!cardEl) return;
+    var nameCounts = {};
+    slots.forEach(function(s){
+      var n = (s.name || '').trim();
+      if(!n) return;
+      var key = n.toLowerCase();
+      nameCounts[key] = (nameCounts[key] || 0) + 1;
+    });
+    cardEl.querySelectorAll('.lineup-table tbody tr').forEach(function(tr, idx){
+      var trimmed = (slots[idx] && slots[idx].name || '').trim();
+      var isDup = trimmed && nameCounts[trimmed.toLowerCase()] > 1;
+      tr.classList.toggle('dup-row', !!isDup);
     });
   }
 

@@ -194,6 +194,16 @@
   .cal-day.has-game:hover{filter:brightness(1.05);}
   .cal-day.selected{box-shadow:0 0 0 2px var(--gold-deep);}
   .cal-day.is-today{box-shadow:0 0 0 2px var(--steel);}
+  .cal-day.scheduled{
+    background:var(--bg-panel); border:2px solid var(--steel); color:var(--ink);
+    font-weight:700; cursor:pointer;
+  }
+  .cal-day.scheduled:hover{background:var(--bg-soft);}
+  .cal-day.future-empty{
+    background:var(--bg-panel); border:1.5px dashed var(--line); color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .cal-day.future-empty:hover{border-color:var(--steel); color:var(--ink);}
 
   .calendar-detail{
     max-width:560px; margin-top:16px; padding:16px 18px;
@@ -205,6 +215,19 @@
   .calendar-detail .cd-team img{width:26px; height:26px; border-radius:50%; object-fit:cover; border:1px solid var(--gold-dim);}
   .calendar-detail .cd-stats{font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;}
   .calendar-detail .cd-actions{display:flex; gap:8px;}
+
+  .home-away-badge{
+    margin-left:auto; padding:3px 10px; border-radius:999px;
+    font-size:11px; font-weight:700; color:#fff; flex-shrink:0;
+  }
+  .home-away-badge.home{background:#e0913f;}
+  .home-away-badge.away{background:#8a8f9c;}
+
+  .cd-matchup{display:flex; align-items:center; gap:14px; margin-bottom:12px;}
+  .cd-side{display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;}
+  .cd-side img{width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--gold-dim);}
+  .cd-side .cd-name{font-size:13px; font-weight:700; color:var(--ink); text-align:center;}
+  .cd-vs{font-family:'Black Han Sans',sans-serif; color:var(--ink-soft); font-size:14px;}
 
   .toolbar{
     display:flex;
@@ -829,6 +852,7 @@
       btn.classList.add('active');
       state.activeTab = btn.dataset.tab;
       document.getElementById('panel-' + state.activeTab).classList.add('active');
+      if(state.activeTab === 'schedule' && typeof renderCalendar === 'function') renderCalendar();
     });
   });
 
@@ -1652,7 +1676,7 @@
       ].forEach(function(p,i){ slotsB[i] = {name:p[0], position:p[1]}; });
 
       var seedLineup = {
-        id: uid(), date: '2026-08-28',
+        id: uid(), date: '2026-08-28', home: 'A',
         teamAId: teamA ? teamA.id : '', teamBId: teamB ? teamB.id : '',
         teamASlots: slotsA, teamBSlots: slotsB
       };
@@ -1745,18 +1769,25 @@
     }
 
     var teamA = teamById(lu.teamAId), teamB = teamById(lu.teamBId);
+    if(!lu.home) lu.home = 'A';
+    var aIsHome = lu.home === 'A';
 
     var html = '<div class="lineup-head"><div class="field"><label>경기 날짜</label>' +
-      '<input type="date" id="lineup-date" value="' + lu.date + '"></div></div>';
+      '<input type="date" id="lineup-date" value="' + lu.date + '"></div>' +
+      '<button type="button" class="btn btn-ghost" id="swap-home-away">⇄ 홈/원정 전환</button></div>';
 
     html += '<div class="lineup-grid">';
     html += '<div class="lineup-card team-a"><div class="lineup-card-head">' +
       (teamA && teamA.photo ? '<img src="' + teamA.photo + '" alt="">' : '<div class="avatar placeholder" style="width:34px;height:34px;">?</div>') +
-      '<select id="lineup-teamA">' + teamOptionsHtml(lu.teamAId) + '</select></div>' +
+      '<select id="lineup-teamA">' + teamOptionsHtml(lu.teamAId) + '</select>' +
+      '<span class="home-away-badge ' + (aIsHome ? 'home">홈' : 'away">원정') + '</span>' +
+      '</div>' +
       renderLineupTableHtml(lu.teamASlots) + '</div>';
     html += '<div class="lineup-card team-b"><div class="lineup-card-head">' +
       (teamB && teamB.photo ? '<img src="' + teamB.photo + '" alt="">' : '<div class="avatar placeholder" style="width:34px;height:34px;">?</div>') +
-      '<select id="lineup-teamB">' + teamOptionsHtml(lu.teamBId) + '</select></div>' +
+      '<select id="lineup-teamB">' + teamOptionsHtml(lu.teamBId) + '</select>' +
+      '<span class="home-away-badge ' + (!aIsHome ? 'home">홈' : 'away">원정') + '</span>' +
+      '</div>' +
       renderLineupTableHtml(lu.teamBSlots) + '</div>';
     html += '</div>';
 
@@ -1777,6 +1808,11 @@
     });
     document.getElementById('lineup-teamB').addEventListener('change', function(){
       lu.teamBId = this.value; saveLineups(); renderLineups();
+    });
+    document.getElementById('swap-home-away').addEventListener('click', function(){
+      lu.home = (lu.home === 'A') ? 'B' : 'A';
+      saveLineups();
+      renderLineups();
     });
 
     body.querySelectorAll('.team-a [data-slot-name]').forEach(function(input){
@@ -1813,7 +1849,7 @@
     var today = new Date().toISOString().slice(0,10);
     var teamA = state.teams[0], teamB = state.teams[1];
     var newLineup = {
-      id: uid(), date: today,
+      id: uid(), date: today, home: 'A',
       teamAId: teamA ? teamA.id : '', teamBId: teamB ? teamB.id : '',
       teamASlots: emptySlots(), teamBSlots: emptySlots()
     };
@@ -1992,12 +2028,14 @@
     renderCalendar();
   });
 
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+
   function renderCalendar(){
     var y = state.calendar.year, m = state.calendar.month;
     calTitle.textContent = y + '년 ' + (m + 1) + '월';
 
     var gameDates = getAllGameDates();
-    var todayStr = new Date().toISOString().slice(0,10);
+    var today = todayStr();
     var firstDow = new Date(y, m, 1).getDay();
     var daysInMonth = new Date(y, m + 1, 0).getDate();
 
@@ -2007,13 +2045,21 @@
     }
     for(var d = 1; d <= daysInMonth; d++){
       var dateStr = ymd(y, m, d);
-      var hasGame = gameDates.indexOf(dateStr) !== -1;
-      var classes = 'cal-day' + (hasGame ? ' has-game' : '') + (dateStr === todayStr ? ' is-today' : '') + (dateStr === state.calendarSelected ? ' selected' : '');
-      html += '<div class="' + classes + '" data-date="' + dateStr + '">' + d + '</div>';
+      var hasData = gameDates.indexOf(dateStr) !== -1;
+      var isPast = dateStr < today;
+      var cls = 'cal-day';
+      if(isPast){
+        if(hasData) cls += ' has-game';
+      } else {
+        cls += hasData ? ' scheduled' : ' future-empty';
+      }
+      if(dateStr === today) cls += ' is-today';
+      if(dateStr === state.calendarSelected) cls += ' selected';
+      html += '<div class="' + cls + '" data-date="' + dateStr + '">' + d + '</div>';
     }
     calGrid.innerHTML = html;
 
-    calGrid.querySelectorAll('.cal-day.has-game').forEach(function(el){
+    calGrid.querySelectorAll('.cal-day.has-game, .cal-day.scheduled, .cal-day.future-empty').forEach(function(el){
       el.addEventListener('click', function(){
         state.calendarSelected = el.dataset.date;
         renderCalendar();
@@ -2023,54 +2069,97 @@
   }
 
   function showCalendarDetail(dateStr){
+    var isPast = dateStr < todayStr();
     var lineupsForDate = state.lineups.filter(function(l){ return l.date === dateStr; });
-    var batterCount = state.batters.filter(function(l){ return l.date === dateStr; }).length;
-    var pitcherCount = state.pitchers.filter(function(l){ return l.date === dateStr; }).length;
 
-    var teamsHtml = '';
-    if(lineupsForDate.length){
-      var lu = lineupsForDate[0];
-      var teamA = teamById(lu.teamAId), teamB = teamById(lu.teamBId);
-      teamsHtml = '<div class="cd-teams">';
-      [teamA, teamB].forEach(function(t){
-        if(!t) return;
-        teamsHtml += '<div class="cd-team">' +
-          (t.photo ? '<img src="' + t.photo + '" alt="">' : '') +
-          '<span>' + escapeHtml(t.name) + '</span></div>';
+    if(isPast){
+      var batterCount = state.batters.filter(function(l){ return l.date === dateStr; }).length;
+      var pitcherCount = state.pitchers.filter(function(l){ return l.date === dateStr; }).length;
+
+      calDetail.innerHTML =
+        '<h4>' + dateStr + '</h4>' +
+        '<div class="cd-stats">타자 기록 ' + batterCount + '건 · 투수 기록 ' + pitcherCount + '건' +
+          (lineupsForDate.length ? ' · 라인업 등록됨' : '') + '</div>' +
+        '<div class="cd-actions">' +
+          '<button type="button" class="btn btn-ghost" id="cd-go-batters">타자 기록 보기</button>' +
+          (lineupsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button>' : '') +
+        '</div>';
+      calDetail.style.display = '';
+
+      document.getElementById('cd-go-batters').addEventListener('click', function(){
+        switchToTab('batters');
+        state.mode.batters = 'bydate';
+        document.querySelectorAll('.view-btn[data-view-tab="batters"]').forEach(function(b){
+          b.classList.toggle('active', b.dataset.view === 'bydate');
+        });
+        state.sort.batters = 'date';
+        state.dir.batters = 'desc';
+        populateSortSelect('batters');
+        updateSearchVisibility('batters');
+        state.search.batters.dates = [dateStr];
+        renderTable('batters');
       });
-      teamsHtml += '</div>';
+
+      var goLineupBtn = document.getElementById('cd-go-lineup');
+      if(goLineupBtn){
+        goLineupBtn.addEventListener('click', function(){
+          switchToTab('lineups');
+          state.activeLineupId = lineupsForDate[0].id;
+          renderLineups();
+        });
+      }
+      return;
     }
 
-    calDetail.innerHTML =
-      '<h4>' + dateStr + '</h4>' +
-      teamsHtml +
-      '<div class="cd-stats">타자 기록 ' + batterCount + '건 · 투수 기록 ' + pitcherCount + '건' +
-        (lineupsForDate.length ? ' · 라인업 등록됨' : '') + '</div>' +
-      '<div class="cd-actions">' +
-        '<button type="button" class="btn btn-ghost" id="cd-go-batters">타자 기록 보기</button>' +
-        (lineupsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button>' : '') +
-      '</div>';
-    calDetail.style.display = '';
+    // Upcoming date: show home/away matchup from the scheduled lineup
+    if(lineupsForDate.length){
+      var lu = lineupsForDate[0];
+      if(!lu.home) lu.home = 'A';
+      var homeId = lu.home === 'A' ? lu.teamAId : lu.teamBId;
+      var awayId = lu.home === 'A' ? lu.teamBId : lu.teamAId;
+      var homeTeam = teamById(homeId), awayTeam = teamById(awayId);
 
-    document.getElementById('cd-go-batters').addEventListener('click', function(){
-      switchToTab('batters');
-      state.mode.batters = 'bydate';
-      document.querySelectorAll('.view-btn[data-view-tab="batters"]').forEach(function(b){
-        b.classList.toggle('active', b.dataset.view === 'bydate');
-      });
-      state.sort.batters = 'date';
-      state.dir.batters = 'desc';
-      populateSortSelect('batters');
-      updateSearchVisibility('batters');
-      state.search.batters.dates = [dateStr];
-      renderTable('batters');
-    });
+      function sideHtml(team, label, cls){
+        return '<div class="cd-side">' +
+          (team && team.photo ? '<img src="' + team.photo + '" alt="">' : '') +
+          '<span class="cd-name">' + (team ? escapeHtml(team.name) : '미정') + '</span>' +
+          '<span class="home-away-badge ' + cls + '" style="margin-left:0;">' + label + '</span>' +
+        '</div>';
+      }
 
-    var goLineupBtn = document.getElementById('cd-go-lineup');
-    if(goLineupBtn){
-      goLineupBtn.addEventListener('click', function(){
+      calDetail.innerHTML =
+        '<h4>' + dateStr + ' 예정 경기</h4>' +
+        '<div class="cd-matchup">' +
+          sideHtml(homeTeam, '홈', 'home') +
+          '<span class="cd-vs">VS</span>' +
+          sideHtml(awayTeam, '원정', 'away') +
+        '</div>' +
+        '<div class="cd-actions"><button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button></div>';
+      calDetail.style.display = '';
+
+      document.getElementById('cd-go-lineup').addEventListener('click', function(){
         switchToTab('lineups');
-        state.activeLineupId = lineupsForDate[0].id;
+        state.activeLineupId = lu.id;
+        renderLineups();
+      });
+    } else {
+      calDetail.innerHTML =
+        '<h4>' + dateStr + '</h4>' +
+        '<div class="cd-stats">아직 등록된 라인업이 없습니다.</div>' +
+        '<div class="cd-actions"><button type="button" class="btn btn-gold" id="cd-new-lineup">이 날짜로 라인업 만들기</button></div>';
+      calDetail.style.display = '';
+
+      document.getElementById('cd-new-lineup').addEventListener('click', function(){
+        var teamA = state.teams[0], teamB = state.teams[1];
+        var newLineup = {
+          id: uid(), date: dateStr, home: 'A',
+          teamAId: teamA ? teamA.id : '', teamBId: teamB ? teamB.id : '',
+          teamASlots: emptySlots(), teamBSlots: emptySlots()
+        };
+        state.lineups.push(newLineup);
+        state.activeLineupId = newLineup.id;
+        saveLineups();
+        switchToTab('lineups');
         renderLineups();
       });
     }

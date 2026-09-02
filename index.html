@@ -549,6 +549,9 @@
         {key:'avg', label:'타율', type:'computed', fmt:avg3, better:'desc', compute:function(row){
           return row.ab > 0 ? row.h / row.ab : 0;
         }},
+        {key:'obp', label:'출루율', type:'computed', fmt:avg3, better:'desc', compute:function(row){
+          return row.pa > 0 ? (row.h + row.bb) / row.pa : 0;
+        }},
         {key:'pa', label:'타석', type:'number', step:'1', fmt:int0, default:0, better:'desc'},
         {key:'ab', label:'타수', type:'number', step:'1', fmt:int0, default:0, better:'desc'},
         {key:'h', label:'안타', type:'number', step:'1', fmt:int0, default:0, better:'desc'},

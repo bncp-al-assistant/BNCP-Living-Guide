@@ -407,7 +407,10 @@
       <div class="toolbar-left">
         <label for="sort-batters">정렬 기준</label>
         <select id="sort-batters"></select>
-        <input type="text" id="search-name-batters" placeholder="이름 검색" style="min-width:140px;">
+        <div style="display:flex; gap:4px;">
+          <input type="text" id="search-name-batters" placeholder="이름 검색" style="min-width:140px;">
+          <button type="button" class="btn btn-ghost" id="search-name-btn" title="검색">🔍</button>
+        </div>
         <div class="date-filter" id="date-filter-batters" style="display:none;">
           <button type="button" class="btn btn-ghost" id="date-filter-toggle">날짜 선택 ▾</button>
           <div class="date-filter-panel" id="date-filter-panel"></div>
@@ -756,16 +759,30 @@
   state.search = { batters: { name:'', dates: [] } };
 
   var searchNameBatters = document.getElementById('search-name-batters');
+  var searchNameBtn = document.getElementById('search-name-btn');
   var dateFilterWrap = document.getElementById('date-filter-batters');
   var dateFilterToggle = document.getElementById('date-filter-toggle');
   var dateFilterPanel = document.getElementById('date-filter-panel');
 
+  function runNameSearch(){
+    state.search.batters.name = searchNameBatters.value;
+    renderTable('batters');
+  }
   if(searchNameBatters){
+    searchNameBatters.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        runNameSearch();
+      }
+    });
     searchNameBatters.addEventListener('input', function(){
-      state.search.batters.name = searchNameBatters.value;
-      renderTable('batters');
+      if(searchNameBatters.value === ''){
+        state.search.batters.name = '';
+        renderTable('batters');
+      }
     });
   }
+  if(searchNameBtn) searchNameBtn.addEventListener('click', runNameSearch);
 
   function getAvailableDates(tab){
     var set = {};

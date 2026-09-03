@@ -115,6 +115,16 @@
   }
   .tab-btn:hover{color:var(--ink);}
   .tab-btn.active{color:var(--gold-deep); border-bottom-color:var(--gold);}
+  .admin-lock-btn{
+    margin-left:auto; align-self:center;
+    background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+    color:var(--ink-soft); font-size:12px; font-weight:700;
+    padding:6px 14px; white-space:nowrap; flex-shrink:0;
+  }
+  .admin-lock-btn:hover{border-color:var(--gold);}
+  .admin-lock-btn.unlocked{
+    background:linear-gradient(180deg, var(--gold-pale), var(--gold)); color:var(--navy-deep); border-color:transparent;
+  }
 
   /* ---------- MAIN ---------- */
   main{padding:40px 6vw 100px;}
@@ -652,6 +662,7 @@
   <button class="tab-btn" data-tab="batters">타자 기록</button>
   <button class="tab-btn" data-tab="pitchers">투수 기록</button>
   <button class="tab-btn" data-tab="lineups">라인업</button>
+  <button type="button" class="admin-lock-btn" id="admin-lock-btn" title="관리자 모드">🔒 관리자</button>
 </nav>
 
 <main>
@@ -897,6 +908,54 @@
 <script>
 (function(){
   "use strict";
+
+  // ---------- ADMIN GATE ----------
+  var ADMIN_PASSWORD = '2026';
+  var ADMIN_KEY = 'kbo_admin_unlocked';
+
+  function isAdminUnlocked(){
+    return localStorage.getItem(ADMIN_KEY) === '1';
+  }
+  function ensureAdmin(){
+    if(isAdminUnlocked()) return true;
+    var pw = prompt('관리자만 기록을 올릴 수 있습니다.\n관리자 비밀번호를 입력하세요.');
+    if(pw === null) return false;
+    if(pw === ADMIN_PASSWORD){
+      localStorage.setItem(ADMIN_KEY, '1');
+      updateAdminLockUI();
+      return true;
+    }
+    alert('비밀번호가 올바르지 않습니다.');
+    return false;
+  }
+  function updateAdminLockUI(){
+    var btn = document.getElementById('admin-lock-btn');
+    if(!btn) return;
+    if(isAdminUnlocked()){
+      btn.textContent = '🔓 관리자 모드';
+      btn.classList.add('unlocked');
+      btn.title = '클릭하면 관리자 모드를 해제합니다';
+    } else {
+      btn.textContent = '🔒 관리자';
+      btn.classList.remove('unlocked');
+      btn.title = '관리자 모드로 전환';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', updateAdminLockUI);
+  var adminLockBtn = document.getElementById('admin-lock-btn');
+  if(adminLockBtn){
+    adminLockBtn.addEventListener('click', function(){
+      if(isAdminUnlocked()){
+        if(confirm('관리자 모드를 해제할까요?')){
+          localStorage.removeItem(ADMIN_KEY);
+          updateAdminLockUI();
+        }
+      } else {
+        ensureAdmin();
+      }
+    });
+    updateAdminLockUI();
+  }
 
   var STORE_KEYS = {
     batters:'kbo_batters', pitchers:'kbo_pitchers', teams:'kbo_teams',
@@ -1377,11 +1436,13 @@
   function wireStatRowActions(tbody){
     tbody.querySelectorAll('[data-profile-edit]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         openProfileModal(btn.dataset.profileEdit, btn.dataset.key);
       });
     });
     tbody.querySelectorAll('[data-player-del]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         var t = btn.dataset.playerDel, key = btn.dataset.key, name = btn.dataset.name;
         if(confirm(name + '의 모든 기록을 삭제할까요? (일자별 기록 전체가 삭제됩니다)')){
           state[t] = state[t].filter(function(log){ return (log.name||'').trim().toLowerCase() !== key; });
@@ -1558,11 +1619,13 @@
 
     tbody.querySelectorAll('[data-log-edit]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         openLogModal(btn.dataset.logEdit, btn.dataset.id);
       });
     });
     tbody.querySelectorAll('[data-log-del]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         var t = btn.dataset.logDel, id = btn.dataset.id;
         var row = state[t].filter(function(r){ return r.id === id; })[0];
         var label = row ? (row.date + ' · ' + row.name) : '이 기록';
@@ -1643,11 +1706,13 @@
 
     tbody.querySelectorAll('[data-edit]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         openModal(btn.dataset.edit, btn.dataset.id);
       });
     });
     tbody.querySelectorAll('[data-del]').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         var t = btn.dataset.del, id = btn.dataset.id;
         var row = state[t].filter(function(r){ return r.id === id; })[0];
         var nm = row ? row.name : '이 기록';
@@ -1677,13 +1742,14 @@
 
   document.querySelectorAll('[data-open-modal]').forEach(function(btn){
     btn.addEventListener('click', function(){
+      if(!ensureAdmin()) return;
       openModal(btn.dataset.openModal, null);
     });
   });
   var addLogBattersBtn = document.getElementById('add-log-batters');
   var addLogPitchersBtn = document.getElementById('add-log-pitchers');
-  if(addLogBattersBtn) addLogBattersBtn.addEventListener('click', function(){ openLogModal('batters', null); });
-  if(addLogPitchersBtn) addLogPitchersBtn.addEventListener('click', function(){ openLogModal('pitchers', null); });
+  if(addLogBattersBtn) addLogBattersBtn.addEventListener('click', function(){ if(!ensureAdmin()) return; openLogModal('batters', null); });
+  if(addLogPitchersBtn) addLogPitchersBtn.addEventListener('click', function(){ if(!ensureAdmin()) return; openLogModal('pitchers', null); });
 
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   overlay.addEventListener('click', function(e){ if(e.target === overlay) closeModal(); });
@@ -2167,6 +2233,7 @@
       lu.teamBId = this.value; renderLineups();
     });
     document.getElementById('swap-home-away').addEventListener('click', function(){
+      if(!ensureAdmin()) return;
       lu.home = (lu.home === 'A') ? 'B' : 'A';
       renderLineups();
     });
@@ -2177,6 +2244,7 @@
     });
 
     document.getElementById('save-lineup').addEventListener('click', function(){
+      if(!ensureAdmin()) return;
       saveLineups();
       populateLineupSelect();
       if(typeof renderCalendar === 'function') renderCalendar();
@@ -2236,6 +2304,7 @@
     renderLineups();
   });
   document.getElementById('lineup-add').addEventListener('click', function(){
+    if(!ensureAdmin()) return;
     var today = new Date().toISOString().slice(0,10);
     var teamA = state.teams[0], teamB = state.teams[1];
     var newLineup = {
@@ -2249,6 +2318,7 @@
     renderLineups();
   });
   document.getElementById('lineup-delete').addEventListener('click', function(){
+    if(!ensureAdmin()) return;
     var lu = getActiveLineup();
     if(!lu) return;
     if(!confirm(lu.date + ' 라인업을 삭제할까요?')) return;
@@ -2355,6 +2425,7 @@
   }
 
   document.getElementById('import-run').addEventListener('click', function(){
+    if(!ensureAdmin()) return;
     var parsed = parsePastedRecords(importTextarea.value);
 
     parsed.batterLogs.forEach(function(entry){
@@ -2572,6 +2643,7 @@
       calDetail.style.display = '';
 
       document.getElementById('cd-new-lineup').addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         var teamA = state.teams[0], teamB = state.teams[1];
         var newLineup = {
           id: uid(), date: dateStr, home: 'A',
@@ -2628,6 +2700,7 @@
 
     listEl.querySelectorAll('.notice-del').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         var id = btn.dataset.id;
         if(!confirm('이 공지를 삭제할까요?')) return;
         state.notices = state.notices.filter(function(n){ return n.id !== id; });
@@ -2641,6 +2714,7 @@
   var noticeAddBtn = document.getElementById('notice-add-btn');
   if(noticeAddBtn){
     noticeAddBtn.addEventListener('click', function(){
+      if(!ensureAdmin()) return;
       var text = (noticeInput.value || '').trim();
       if(!text) return;
       state.notices.push({ id: uid(), text: text, ts: Date.now() });
@@ -2729,6 +2803,7 @@
 
     container.querySelectorAll('.rp-upload-btn').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         triggerRosterPhotoUpload(btn.dataset.key);
       });
     });
@@ -2827,6 +2902,7 @@
 
     listEl.querySelectorAll('.gr-del').forEach(function(btn){
       btn.addEventListener('click', function(){
+        if(!ensureAdmin()) return;
         if(!confirm('이 경기 결과를 삭제할까요?')) return;
         state.gameResults = state.gameResults.filter(function(r){ return r.id !== btn.dataset.id; });
         saveGameResults();
@@ -2839,6 +2915,7 @@
   var grAddBtn = document.getElementById('gr-add-btn');
   if(grAddBtn){
     grAddBtn.addEventListener('click', function(){
+      if(!ensureAdmin()) return;
       var date = document.getElementById('gr-date').value;
       var teamAId = document.getElementById('gr-teamA').value;
       var teamBId = document.getElementById('gr-teamB').value;

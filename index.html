@@ -219,6 +219,21 @@
   .schedule-layout{display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;}
   .schedule-main{flex:1 1 420px; min-width:0;}
   .schedule-side{width:320px; flex-shrink:0;}
+  .league-leaders-card{
+    flex:1 1 240px; min-width:200px;
+    border:1px solid var(--line); border-radius:12px; background:var(--bg-panel);
+    padding:18px;
+  }
+  .league-leaders-card h3{margin:0 0 14px; font-size:15px; color:var(--gold-deep);}
+  .league-leaders{display:flex; flex-direction:column; gap:12px;}
+  .leader-tile{
+    border:1px solid var(--line); border-radius:8px; background:var(--bg-soft);
+    padding:10px 12px;
+  }
+  .leader-tile .lt-label{font-size:11px; color:var(--ink-soft); margin-bottom:4px;}
+  .leader-tile .lt-name{font-size:14px; font-weight:700; color:var(--ink);}
+  .leader-tile .lt-value{font-family:'Black Han Sans',sans-serif; font-size:18px; color:var(--gold-deep);}
+  .leader-tile .lt-empty{font-size:12.5px; color:var(--ink-soft);}
   @media (max-width:900px){
     .schedule-side{width:100%;}
   }
@@ -273,6 +288,35 @@
   .roster-player .rp-name{font-weight:700; color:var(--ink); flex-shrink:0; font-size:14px;}
   .roster-player .rp-stats{color:var(--ink-soft); font-size:12px; text-align:right;}
   .roster-empty{font-size:12.5px; color:var(--ink-soft); padding:4px 0;}
+
+  .game-results-card{
+    border:1px solid var(--line); border-radius:12px; background:var(--bg-panel);
+    padding:18px; margin-bottom:22px;
+  }
+  .game-results-card h3{margin:0 0 12px; font-size:15px; color:var(--gold-deep);}
+  .game-results-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:280px; overflow-y:auto;}
+  .gr-item{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:8px 12px; border-radius:8px; background:var(--bg-soft); font-size:13px;
+  }
+  .gr-item .gr-date{color:var(--ink-soft); font-size:11.5px; flex-shrink:0; width:76px;}
+  .gr-item .gr-match{display:flex; align-items:center; gap:8px; flex:1; min-width:200px;}
+  .gr-item .gr-team{display:flex; align-items:center; gap:6px; font-weight:700; color:var(--ink);}
+  .gr-item .gr-team img{width:20px; height:20px; border-radius:50%; object-fit:cover; border:1px solid var(--gold-dim);}
+  .gr-item .gr-team.winner{color:var(--gold-deep);}
+  .gr-item .gr-score{font-family:'Black Han Sans',sans-serif; font-size:15px; color:var(--ink);}
+  .gr-item .gr-del{
+    background:none; border:none; color:var(--ink-soft); font-size:13px; cursor:pointer; margin-left:auto;
+  }
+  .gr-item .gr-del:hover{color:var(--danger);}
+  .gr-add-row{
+    display:flex; align-items:center; gap:6px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .gr-add-row select{flex:1; min-width:110px; padding:8px 6px; font-size:13px;}
+  .gr-add-row input[type=number]{width:56px; text-align:center; padding:8px 4px;}
+  .gr-add-row input[type=date]{flex:0 0 130px; padding:8px 6px; font-size:13px;}
+  .gr-vs{color:var(--ink-soft); font-weight:700;}
+
   .rp-left{display:flex; align-items:center; gap:8px; min-width:0;}
   .rp-avatar-wrap{position:relative; width:52px; height:52px; flex-shrink:0;}
   .rp-avatar{
@@ -586,7 +630,7 @@
 <nav class="tabbar">
   <button class="tab-btn active" data-tab="schedule">경기 일정</button>
   <button class="tab-btn" data-tab="roster">선수명단</button>
-  <button class="tab-btn" data-tab="teams">팀 순위</button>
+  <button class="tab-btn" data-tab="teams">경기결과 및 팀순위</button>
   <button class="tab-btn" data-tab="batters">타자 기록</button>
   <button class="tab-btn" data-tab="pitchers">투수 기록</button>
   <button class="tab-btn" data-tab="lineups">라인업</button>
@@ -610,6 +654,10 @@
           <div class="calendar-grid" id="calendar-grid"></div>
         </div>
         <div class="calendar-detail" id="calendar-detail" style="display:none;"></div>
+      </div>
+      <div class="league-leaders-card">
+        <h3>🥇 리그 리더</h3>
+        <div class="league-leaders" id="league-leaders"></div>
       </div>
       <div class="schedule-side">
         <div class="notice-board">
@@ -708,6 +756,22 @@
 
   <!-- TEAMS -->
   <section class="panel" id="panel-teams">
+    <div class="game-results-card">
+      <h3>🏆 경기 결과</h3>
+      <div class="game-results-list" id="game-results-list"></div>
+      <div class="gr-add">
+        <div class="gr-add-row">
+          <input type="date" id="gr-date">
+          <select id="gr-teamA"></select>
+          <input type="number" id="gr-scoreA" placeholder="점수" min="0">
+          <span class="gr-vs">:</span>
+          <input type="number" id="gr-scoreB" placeholder="점수" min="0">
+          <select id="gr-teamB"></select>
+        </div>
+        <button type="button" class="btn btn-gold" id="gr-add-btn">경기 결과 등록</button>
+      </div>
+    </div>
+
     <div class="toolbar">
       <div class="toolbar-left">
         <label for="sort-teams">정렬 기준</label>
@@ -819,7 +883,7 @@
   var STORE_KEYS = {
     batters:'kbo_batters', pitchers:'kbo_pitchers', teams:'kbo_teams',
     batterProfiles:'kbo_batter_profiles', pitcherProfiles:'kbo_pitcher_profiles',
-    notices:'kbo_notices'
+    notices:'kbo_notices', gameResults:'kbo_game_results'
   };
 
   var SCHEMA = {
@@ -1002,8 +1066,12 @@
       btn.classList.add('active');
       state.activeTab = btn.dataset.tab;
       document.getElementById('panel-' + state.activeTab).classList.add('active');
-      if(state.activeTab === 'schedule' && typeof renderCalendar === 'function') renderCalendar();
+      if(state.activeTab === 'schedule'){
+        if(typeof renderCalendar === 'function') renderCalendar();
+        if(typeof renderLeagueLeaders === 'function') renderLeagueLeaders();
+      }
       if(state.activeTab === 'roster' && typeof renderRoster === 'function') renderRoster();
+      if(state.activeTab === 'teams' && typeof renderGameResults === 'function') renderGameResults();
     });
   });
 
@@ -2301,6 +2369,7 @@
     state.batters.forEach(function(l){ if(l.date) set[l.date] = true; });
     state.pitchers.forEach(function(l){ if(l.date) set[l.date] = true; });
     state.lineups.forEach(function(l){ if(l.date) set[l.date] = true; });
+    if(state.gameResults) state.gameResults.forEach(function(r){ if(r.date) set[r.date] = true; });
     return Object.keys(set).sort();
   }
 
@@ -2375,6 +2444,7 @@
   function showCalendarDetail(dateStr){
     var isPast = dateStr < todayStr();
     var lineupsForDate = state.lineups.filter(function(l){ return l.date === dateStr; });
+    var resultsForDate = state.gameResults.filter(function(r){ return r.date === dateStr; });
 
     if(isPast){
       var batterCount = state.batters.filter(function(l){ return l.date === dateStr; }).length;
@@ -2383,11 +2453,13 @@
       calDetail.innerHTML =
         '<h4>' + dateStr + '</h4>' +
         '<div class="cd-stats">타자 기록 ' + batterCount + '건 · 투수 기록 ' + pitcherCount + '건' +
-          (lineupsForDate.length ? ' · 라인업 등록됨' : '') + '</div>' +
+          (lineupsForDate.length ? ' · 라인업 등록됨' : '') +
+          (resultsForDate.length ? ' · 경기 결과 등록됨' : '') + '</div>' +
         '<div class="cd-actions">' +
           '<button type="button" class="btn btn-ghost" id="cd-go-batters">타자 기록 보기</button>' +
           '<button type="button" class="btn btn-ghost" id="cd-go-pitchers">투수 기록 보기</button>' +
           (lineupsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-lineup">라인업 보기</button>' : '') +
+          (resultsForDate.length ? '<button type="button" class="btn btn-ghost" id="cd-go-results">경기 결과 보기</button>' : '') +
         '</div>';
       calDetail.style.display = '';
 
@@ -2417,6 +2489,20 @@
         state.search.pitchers.dates = [dateStr];
         renderTable('pitchers');
       });
+
+      var goResultsBtn = document.getElementById('cd-go-results');
+      if(goResultsBtn){
+        goResultsBtn.addEventListener('click', function(){
+          switchToTab('teams');
+          renderGameResults();
+          var target = document.querySelector('.gr-item[data-date="' + dateStr + '"]');
+          if(target){
+            target.scrollIntoView({ behavior:'smooth', block:'center' });
+            target.style.boxShadow = '0 0 0 2px var(--gold-deep)';
+            setTimeout(function(){ target.style.boxShadow = ''; }, 1800);
+          }
+        });
+      }
 
       var goLineupBtn = document.getElementById('cd-go-lineup');
       if(goLineupBtn){
@@ -2678,12 +2764,127 @@
     renderTable('pitchers');
   }
 
+  // ---------- GAME RESULTS (경기 결과) ----------
+  function loadGameResults(){
+    try{
+      var raw = localStorage.getItem(STORE_KEYS.gameResults);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveGameResults(){ localStorage.setItem(STORE_KEYS.gameResults, JSON.stringify(state.gameResults)); }
+  state.gameResults = loadGameResults();
+
+  function populateGameResultTeamSelects(){
+    var selA = document.getElementById('gr-teamA');
+    var selB = document.getElementById('gr-teamB');
+    if(!selA || !selB) return;
+    var opts = state.teams.map(function(t){ return '<option value="' + t.id + '">' + escapeHtml(t.name) + '</option>'; }).join('');
+    selA.innerHTML = opts; selB.innerHTML = opts;
+    if(state.teams.length > 1) selB.selectedIndex = 1;
+  }
+
+  function renderGameResults(){
+    var listEl = document.getElementById('game-results-list');
+    if(!listEl) return;
+    populateGameResultTeamSelects();
+
+    if(state.gameResults.length === 0){
+      listEl.innerHTML = '<div class="roster-empty">아직 등록된 경기 결과가 없습니다.</div>';
+      return;
+    }
+    var sorted = state.gameResults.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    listEl.innerHTML = sorted.map(function(r){
+      var teamA = teamById(r.teamAId), teamB = teamById(r.teamBId);
+      var aWin = r.scoreA > r.scoreB, bWin = r.scoreB > r.scoreA;
+      return '<div class="gr-item" data-date="' + r.date + '">' +
+        '<span class="gr-date">' + r.date + '</span>' +
+        '<div class="gr-match">' +
+          '<span class="gr-team' + (aWin ? ' winner' : '') + '">' + (teamA && teamA.photo ? '<img src="' + teamA.photo + '" alt="">' : '') + escapeHtml(teamA ? teamA.name : '팀 미정') + '</span>' +
+          '<span class="gr-score">' + r.scoreA + ' : ' + r.scoreB + '</span>' +
+          '<span class="gr-team' + (bWin ? ' winner' : '') + '">' + (teamB && teamB.photo ? '<img src="' + teamB.photo + '" alt="">' : '') + escapeHtml(teamB ? teamB.name : '팀 미정') + '</span>' +
+        '</div>' +
+        '<button type="button" class="gr-del" data-id="' + r.id + '" title="삭제">✕</button>' +
+      '</div>';
+    }).join('');
+
+    listEl.querySelectorAll('.gr-del').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!confirm('이 경기 결과를 삭제할까요?')) return;
+        state.gameResults = state.gameResults.filter(function(r){ return r.id !== btn.dataset.id; });
+        saveGameResults();
+        renderGameResults();
+        if(typeof renderCalendar === 'function') renderCalendar();
+      });
+    });
+  }
+
+  var grAddBtn = document.getElementById('gr-add-btn');
+  if(grAddBtn){
+    grAddBtn.addEventListener('click', function(){
+      var date = document.getElementById('gr-date').value;
+      var teamAId = document.getElementById('gr-teamA').value;
+      var teamBId = document.getElementById('gr-teamB').value;
+      var scoreA = parseInt(document.getElementById('gr-scoreA').value, 10);
+      var scoreB = parseInt(document.getElementById('gr-scoreB').value, 10);
+      if(!date || !teamAId || !teamBId || isNaN(scoreA) || isNaN(scoreB)){
+        alert('날짜, 팀, 점수를 모두 입력해주세요.');
+        return;
+      }
+      state.gameResults.push({ id: uid(), date: date, teamAId: teamAId, teamBId: teamBId, scoreA: scoreA, scoreB: scoreB });
+      saveGameResults();
+      document.getElementById('gr-date').value = '';
+      document.getElementById('gr-scoreA').value = '';
+      document.getElementById('gr-scoreB').value = '';
+      renderGameResults();
+      if(typeof renderCalendar === 'function') renderCalendar();
+    });
+  }
+
+  // ---------- LEAGUE LEADERS (schedule sidebar) ----------
+  function renderLeagueLeaders(){
+    var el = document.getElementById('league-leaders');
+    if(!el) return;
+
+    var totalGames = getAvailableDates('batters').length;
+    var requiredPA = totalGames * 1.5;
+    var battersAgg = aggregateRows('batters');
+    var qualified = requiredPA > 0 ? battersAgg.filter(function(r){ return r.pa >= requiredPA; }) : battersAgg;
+    var avgCol = SCHEMA.batters.columns.filter(function(c){ return c.key === 'avg'; })[0];
+    var obpCol = SCHEMA.batters.columns.filter(function(c){ return c.key === 'obp'; })[0];
+
+    var avgLeader = qualified.length ? qualified.slice().sort(function(a,b){ return avgCol.compute(b) - avgCol.compute(a); })[0] : null;
+    var obpLeader = qualified.length ? qualified.slice().sort(function(a,b){ return obpCol.compute(b) - obpCol.compute(a); })[0] : null;
+
+    var pitchersAgg = aggregateRows('pitchers');
+    var winsLeader = pitchersAgg.length ? pitchersAgg.slice().sort(function(a,b){ return b.wins - a.wins; })[0] : null;
+    var kLeader = pitchersAgg.length ? pitchersAgg.slice().sort(function(a,b){ return b.k - a.k; })[0] : null;
+
+    function tile(label, row, valueText){
+      if(!row){
+        return '<div class="leader-tile"><div class="lt-label">' + label + '</div><div class="lt-empty">기록 없음</div></div>';
+      }
+      return '<div class="leader-tile">' +
+        '<div class="lt-label">' + label + '</div>' +
+        '<div class="lt-name">' + escapeHtml(row.name) + (row.team ? ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px;">(' + escapeHtml(row.team) + ')</span>' : '') + '</div>' +
+        '<div class="lt-value">' + valueText + '</div>' +
+      '</div>';
+    }
+
+    el.innerHTML =
+      tile('타율 1위', avgLeader, avgLeader ? avg3(avgCol.compute(avgLeader)) : '') +
+      tile('출루율 1위', obpLeader, obpLeader ? avg3(obpCol.compute(obpLeader)) : '') +
+      tile('다승 1위', winsLeader, winsLeader ? winsLeader.wins + '승' : '') +
+      tile('삼진 1위', kLeader, kLeader ? kLeader.k + 'K' : '');
+  }
+
   // ---------- INIT ----------
   Object.keys(SCHEMA).forEach(renderTable);
   renderLineups();
   renderCalendar();
   renderNotices();
   renderRoster();
+  renderGameResults();
+  renderLeagueLeaders();
 
 })();
 </script>

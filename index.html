@@ -230,10 +230,28 @@
     border:1px solid var(--line); border-radius:8px; background:var(--bg-soft);
     padding:10px 12px;
   }
-  .leader-tile .lt-label{font-size:11px; color:var(--ink-soft); margin-bottom:4px;}
-  .leader-tile .lt-name{font-size:14px; font-weight:700; color:var(--ink);}
-  .leader-tile .lt-value{font-family:'Black Han Sans',sans-serif; font-size:18px; color:var(--gold-deep);}
+  .leader-tile .lt-label{font-size:11px; color:var(--ink-soft); margin-bottom:6px; font-weight:700;}
   .leader-tile .lt-empty{font-size:12.5px; color:var(--ink-soft);}
+  .lt-row-first{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .lt-photo{
+    width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0;
+    border:2px solid var(--gold-dim); background:var(--steel);
+  }
+  .lt-photo-placeholder{
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Black Han Sans',sans-serif; color:rgba(255,255,255,0.75); font-size:15px;
+  }
+  .lt-info .lt-name{font-size:14px; font-weight:700; color:var(--ink);}
+  .lt-info .lt-value{font-family:'Black Han Sans',sans-serif; font-size:18px; color:var(--gold-deep);}
+  .lt-team{font-weight:400; color:var(--ink-soft); font-size:11px;}
+  .lt-row-second{
+    display:flex; align-items:center; gap:6px; padding-top:6px;
+    border-top:1px dashed var(--line); font-size:12px;
+  }
+  .lt-rank{color:var(--ink-soft); font-size:10.5px; flex-shrink:0;}
+  .lt-name-sm{font-weight:700; color:var(--ink); flex:1; min-width:0;}
+  .lt-team-sm{font-weight:400; color:var(--ink-soft); font-size:10.5px;}
+  .lt-value-sm{color:var(--ink-soft); font-size:12px; flex-shrink:0;}
   @media (max-width:900px){
     .schedule-side{width:100%;}
   }
@@ -2852,29 +2870,48 @@
     var avgCol = SCHEMA.batters.columns.filter(function(c){ return c.key === 'avg'; })[0];
     var obpCol = SCHEMA.batters.columns.filter(function(c){ return c.key === 'obp'; })[0];
 
-    var avgLeader = qualified.length ? qualified.slice().sort(function(a,b){ return avgCol.compute(b) - avgCol.compute(a); })[0] : null;
-    var obpLeader = qualified.length ? qualified.slice().sort(function(a,b){ return obpCol.compute(b) - obpCol.compute(a); })[0] : null;
+    var avgRows = qualified.slice().sort(function(a,b){ return avgCol.compute(b) - avgCol.compute(a); });
+    var obpRows = qualified.slice().sort(function(a,b){ return obpCol.compute(b) - obpCol.compute(a); });
 
     var pitchersAgg = aggregateRows('pitchers');
-    var winsLeader = pitchersAgg.length ? pitchersAgg.slice().sort(function(a,b){ return b.wins - a.wins; })[0] : null;
-    var kLeader = pitchersAgg.length ? pitchersAgg.slice().sort(function(a,b){ return b.k - a.k; })[0] : null;
+    var winsRows = pitchersAgg.slice().sort(function(a,b){ return b.wins - a.wins; });
+    var kRows = pitchersAgg.slice().sort(function(a,b){ return b.k - a.k; });
 
-    function tile(label, row, valueText){
-      if(!row){
+    function tile(label, rows, valueFn){
+      if(!rows || rows.length === 0){
         return '<div class="leader-tile"><div class="lt-label">' + label + '</div><div class="lt-empty">기록 없음</div></div>';
       }
-      return '<div class="leader-tile">' +
-        '<div class="lt-label">' + label + '</div>' +
-        '<div class="lt-name">' + escapeHtml(row.name) + (row.team ? ' <span style="font-weight:400;color:var(--ink-soft);font-size:11px;">(' + escapeHtml(row.team) + ')</span>' : '') + '</div>' +
-        '<div class="lt-value">' + valueText + '</div>' +
-      '</div>';
+      var top = rows.slice(0, 2);
+      var html = '<div class="leader-tile"><div class="lt-label">' + label + '</div>';
+      top.forEach(function(row, idx){
+        var teamTag = row.team ? ' <span class="lt-team">(' + escapeHtml(row.team) + ')</span>' : '';
+        if(idx === 0){
+          var photo = row.photo
+            ? '<img class="lt-photo" src="' + row.photo + '" alt="">'
+            : '<div class="lt-photo lt-photo-placeholder">' + escapeHtml(row.name.charAt(0)) + '</div>';
+          html += '<div class="lt-row lt-row-first">' + photo +
+            '<div class="lt-info">' +
+              '<div class="lt-name">' + escapeHtml(row.name) + teamTag + '</div>' +
+              '<div class="lt-value">' + valueFn(row) + '</div>' +
+            '</div>' +
+          '</div>';
+        } else {
+          html += '<div class="lt-row lt-row-second">' +
+            '<span class="lt-rank">2위</span>' +
+            '<span class="lt-name-sm">' + escapeHtml(row.name) + teamTag + '</span>' +
+            '<span class="lt-value-sm">' + valueFn(row) + '</span>' +
+          '</div>';
+        }
+      });
+      html += '</div>';
+      return html;
     }
 
     el.innerHTML =
-      tile('타율 1위', avgLeader, avgLeader ? avg3(avgCol.compute(avgLeader)) : '') +
-      tile('출루율 1위', obpLeader, obpLeader ? avg3(obpCol.compute(obpLeader)) : '') +
-      tile('다승 1위', winsLeader, winsLeader ? winsLeader.wins + '승' : '') +
-      tile('삼진 1위', kLeader, kLeader ? kLeader.k + 'K' : '');
+      tile('타율', avgRows, function(r){ return avg3(avgCol.compute(r)); }) +
+      tile('출루율', obpRows, function(r){ return avg3(obpCol.compute(r)); }) +
+      tile('다승', winsRows, function(r){ return r.wins + '승'; }) +
+      tile('삼진', kRows, function(r){ return r.k + 'K'; });
   }
 
   // ---------- INIT ----------
